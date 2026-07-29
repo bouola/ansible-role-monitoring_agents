@@ -1,0 +1,58 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  vars_files:
+    - >-
+      {{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY')
+      | default(lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY')
+      | dirname | dirname, true) }}/defaults/main.yml
+  vars:
+    monitoring_agents_promtail_bearer_token_file: "/etc/monitoring-agents/loki.token"
+  tasks:
+    - name: "Collect promtail binary state"
+      ansible.builtin.stat:
+        path: "{{ monitoring_agents_binary_install_dir }}/promtail"
+      register: monitoring_agents_promtail_binary
+
+    - name: "Assert promtail binary exists"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_promtail_binary.stat.exists
+          - monitoring_agents_promtail_binary.stat.executable
+        fail_msg: >-
+          promtail binary is missing or is not executable at
+          {{ monitoring_agents_binary_install_dir }}/promtail.
+
+    - name: "Collect promtail service state"
+      ansible.builtin.systemd:
+        name: "promtail"
+      register: monitoring_agents_promtail_service
+      failed_when: false
+
+    - name: "Assert promtail service is enabled and running"
+      ansible.builtin.assert:
+        that:
+          - not monitoring_agents_promtail_service.failed
+          - monitoring_agents_promtail_service.status.ActiveState == "active"
+          - monitoring_agents_promtail_service.status.UnitFileState == "enabled"
+        fail_msg: >-
+          promtail service is not enabled and active.
+
+    - name: "Read promtail configuration"
+      ansible.builtin.slurp:
+        path: "{{ monitoring_agents_config_dir }}/promtail.yml"
+      register: monitoring_agents_promtail_config
+
+    - name: "Parse promtail configuration"
+      ansible.builtin.set_fact:
+        monitoring_agents_promtail_config_text: >-
+          {{ monitoring_agents_promtail_config.content | b64decode }}
+        monitoring_agents_promtail_config_data: >-
+          {{ monitoring_agents_promtail_config.content | b64decode | from_yaml }}
+
+    - name: "Wait for promtail port"
+      ansible.builtin.wait_for:
+        port: "{{ monitoring_agents_promtail_port }}"
+        host: "127.0.0.1"
+        timeout: 15

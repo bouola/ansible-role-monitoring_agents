@@ -1,0 +1,23 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    monitoring_agents_node_exporter_enabled: true
+    monitoring_agents_promtail_enabled: true
+    monitoring_agents_promtail_loki_url: "http://127.0.0.1:3100"
+    monitoring_agents_promtail_log_paths:
+      - "/tmp/molecule-promtail-default.log"
+    monitoring_agents_cadvisor_enabled: true
+
+  pre_tasks:
+    - name: "Create default promtail log file"
+      ansible.builtin.copy:
+        dest: "/tmp/molecule-promtail-default.log"
+        content: "default molecule log line\n"
+        owner: "root"
+        group: "root"
+        mode: "0644"
+
+  roles:
+    - role: "bouola.monitoring_agents"

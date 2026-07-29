@@ -1,0 +1,78 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  vars_files:
+    - >-
+      {{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY')
+      | default(lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY')
+      | dirname | dirname, true) }}/defaults/main.yml
+  tasks:
+    - name: "Collect cAdvisor binary state"
+      ansible.builtin.stat:
+        path: "{{ monitoring_agents_binary_install_dir }}/cadvisor"
+      register: monitoring_agents_cadvisor_binary
+
+    - name: "Assert cAdvisor binary exists"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_cadvisor_binary.stat.exists
+          - monitoring_agents_cadvisor_binary.stat.executable
+        fail_msg: >-
+          cAdvisor binary is missing or is not executable at
+          {{ monitoring_agents_binary_install_dir }}/cadvisor.
+
+    - name: "Collect cAdvisor service state"
+      ansible.builtin.systemd:
+        name: "cadvisor"
+      register: monitoring_agents_cadvisor_service
+      failed_when: false
+
+    - name: "Assert cAdvisor service is enabled and running"
+      ansible.builtin.assert:
+        that:
+          - not monitoring_agents_cadvisor_service.failed
+          - monitoring_agents_cadvisor_service.status.ActiveState == "active"
+          - monitoring_agents_cadvisor_service.status.UnitFileState == "enabled"
+        fail_msg: >-
+          cAdvisor service is not enabled and active.
+
+    - name: "Read cAdvisor environment file"
+      ansible.builtin.slurp:
+        path: "{{ monitoring_agents_config_dir }}/cadvisor.env"
+      register: monitoring_agents_cadvisor_env
+
+    - name: "Assert cAdvisor full configuration"
+      ansible.builtin.assert:
+        that:
+          - "'--port=8080' in (monitoring_agents_cadvisor_env.content | b64decode)"
+        fail_msg: >-
+          cAdvisor environment file does not include expected full configuration values.
+
+    - name: "Wait for cAdvisor port"
+      ansible.builtin.wait_for:
+        port: "{{ monitoring_agents_cadvisor_port }}"
+        host: "127.0.0.1"
+        timeout: 60
+      failed_when: false
+      register: monitoring_agents_cadvisor_port_check
+
+    - name: "Collect cAdvisor logs when port is unavailable"
+      ansible.builtin.command:
+        cmd: "journalctl -u cadvisor --no-pager -n 80"
+      changed_when: false
+      failed_when: false
+      register: monitoring_agents_cadvisor_logs
+      when: monitoring_agents_cadvisor_port_check.failed
+
+    - name: "Show cAdvisor logs when port is unavailable"
+      ansible.builtin.debug:
+        var: monitoring_agents_cadvisor_logs.stdout_lines
+      when: monitoring_agents_cadvisor_port_check.failed
+
+    - name: "Assert cAdvisor port is listening"
+      ansible.builtin.assert:
+        that:
+          - not monitoring_agents_cadvisor_port_check.failed
+        fail_msg: >-
+          cAdvisor port {{ monitoring_agents_cadvisor_port }} is not listening.

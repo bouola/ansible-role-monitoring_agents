@@ -1,0 +1,193 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  vars_files:
+    - >-
+      {{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY')
+      | default(lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY')
+      | dirname | dirname, true) }}/defaults/main.yml
+  tasks:
+    - name: "Collect node-exporter binary state"
+      ansible.builtin.stat:
+        path: "{{ monitoring_agents_binary_install_dir }}/node_exporter"
+      register: monitoring_agents_node_exporter_binary
+
+    - name: "Assert node-exporter binary exists"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_node_exporter_binary.stat.exists
+          - monitoring_agents_node_exporter_binary.stat.executable
+        fail_msg: >-
+          node-exporter binary is missing or is not executable at
+          {{ monitoring_agents_binary_install_dir }}/node_exporter.
+
+    - name: "Collect node-exporter service state"
+      ansible.builtin.systemd:
+        name: "node-exporter"
+      register: monitoring_agents_node_exporter_service
+
+    - name: "Assert node-exporter service is enabled and running"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_node_exporter_service.status.ActiveState == "active"
+          - monitoring_agents_node_exporter_service.status.UnitFileState == "enabled"
+        fail_msg: >-
+          node-exporter service is not enabled and active.
+
+    - name: "Read node-exporter binary version"
+      ansible.builtin.command:
+        cmd: "{{ monitoring_agents_binary_install_dir }}/node_exporter --version"
+      changed_when: false
+      register: monitoring_agents_node_exporter_version_check
+
+    - name: "Assert node-exporter binary version"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_node_exporter_version in monitoring_agents_node_exporter_version_check.stdout
+        fail_msg: >-
+          node-exporter binary version does not match
+          {{ monitoring_agents_node_exporter_version }}.
+
+    - name: "Collect monitoring user state"
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ monitoring_agents_user }}"
+
+    - name: "Assert monitoring user has no login shell"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd[monitoring_agents_user][4] == "/nonexistent"
+          - ansible_facts.getent_passwd[monitoring_agents_user][5] == monitoring_agents_user_shell
+        fail_msg: >-
+          Monitoring user {{ monitoring_agents_user }} does not use the expected
+          no-home and no-login settings.
+
+    - name: "Wait for node-exporter port"
+      ansible.builtin.wait_for:
+        port: "{{ monitoring_agents_node_exporter_port }}"
+        host: "127.0.0.1"
+        timeout: 15
+      failed_when: false
+      register: monitoring_agents_node_exporter_port_check
+
+    - name: "Assert node-exporter port is listening"
+      ansible.builtin.assert:
+        that:
+          - not monitoring_agents_node_exporter_port_check.failed
+        fail_msg: >-
+          node-exporter port {{ monitoring_agents_node_exporter_port }} is not listening.
+
+    - name: "Collect promtail binary state"
+      ansible.builtin.stat:
+        path: "{{ monitoring_agents_binary_install_dir }}/promtail"
+      register: monitoring_agents_promtail_binary
+
+    - name: "Assert promtail binary exists"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_promtail_binary.stat.exists
+          - monitoring_agents_promtail_binary.stat.executable
+        fail_msg: >-
+          promtail binary is missing or is not executable at
+          {{ monitoring_agents_binary_install_dir }}/promtail.
+
+    - name: "Collect promtail service state"
+      ansible.builtin.systemd:
+        name: "promtail"
+      register: monitoring_agents_promtail_service
+
+    - name: "Assert promtail service is enabled and running"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_promtail_service.status.ActiveState == "active"
+          - monitoring_agents_promtail_service.status.UnitFileState == "enabled"
+        fail_msg: >-
+          promtail service is not enabled and active.
+
+    - name: "Read promtail configuration"
+      ansible.builtin.slurp:
+        path: "{{ monitoring_agents_config_dir }}/promtail.yml"
+      register: monitoring_agents_promtail_config
+
+    - name: "Assert promtail minimal configuration"
+      ansible.builtin.assert:
+        that:
+          - "'http_listen_port: 9080' in (monitoring_agents_promtail_config.content | b64decode)"
+          - "'filename: ' ~ monitoring_agents_state_dir ~ '/promtail.positions.yml' in (monitoring_agents_promtail_config.content | b64decode)"
+          - "'/tmp/molecule-promtail-default.log' in (monitoring_agents_promtail_config.content | b64decode)"
+        fail_msg: >-
+          promtail minimal configuration does not include expected values.
+
+    - name: "Wait for promtail port"
+      ansible.builtin.wait_for:
+        port: "{{ monitoring_agents_promtail_port }}"
+        host: "127.0.0.1"
+        timeout: 15
+
+    - name: "Collect cAdvisor binary state"
+      ansible.builtin.stat:
+        path: "{{ monitoring_agents_binary_install_dir }}/cadvisor"
+      register: monitoring_agents_cadvisor_binary
+
+    - name: "Assert cAdvisor binary exists"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_cadvisor_binary.stat.exists
+          - monitoring_agents_cadvisor_binary.stat.executable
+        fail_msg: >-
+          cAdvisor binary is missing or is not executable at
+          {{ monitoring_agents_binary_install_dir }}/cadvisor.
+
+    - name: "Collect cAdvisor service state"
+      ansible.builtin.systemd:
+        name: "cadvisor"
+      register: monitoring_agents_cadvisor_service
+
+    - name: "Assert cAdvisor service is enabled and running"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_cadvisor_service.status.ActiveState == "active"
+          - monitoring_agents_cadvisor_service.status.UnitFileState == "enabled"
+        fail_msg: >-
+          cAdvisor service is not enabled and active.
+
+    - name: "Read cAdvisor environment file"
+      ansible.builtin.slurp:
+        path: "{{ monitoring_agents_config_dir }}/cadvisor.env"
+      register: monitoring_agents_cadvisor_env
+
+    - name: "Assert cAdvisor minimal configuration"
+      ansible.builtin.assert:
+        that:
+          - "'--port=8080' in (monitoring_agents_cadvisor_env.content | b64decode)"
+        fail_msg: >-
+          cAdvisor minimal configuration does not include the expected port.
+
+    - name: "Wait for cAdvisor port"
+      ansible.builtin.wait_for:
+        port: "{{ monitoring_agents_cadvisor_port }}"
+        host: "127.0.0.1"
+        timeout: 60
+      failed_when: false
+      register: monitoring_agents_cadvisor_port_check
+
+    - name: "Collect cAdvisor logs when port is unavailable"
+      ansible.builtin.command:
+        cmd: "journalctl -u cadvisor --no-pager -n 80"
+      changed_when: false
+      failed_when: false
+      register: monitoring_agents_cadvisor_logs
+      when: monitoring_agents_cadvisor_port_check.failed
+
+    - name: "Show cAdvisor logs when port is unavailable"
+      ansible.builtin.debug:
+        var: monitoring_agents_cadvisor_logs.stdout_lines
+      when: monitoring_agents_cadvisor_port_check.failed
+
+    - name: "Assert cAdvisor port is listening"
+      ansible.builtin.assert:
+        that:
+          - not monitoring_agents_cadvisor_port_check.failed
+        fail_msg: >-
+          cAdvisor port {{ monitoring_agents_cadvisor_port }} is not listening.

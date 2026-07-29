@@ -1,0 +1,60 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    monitoring_agents_node_exporter_enabled: false
+    monitoring_agents_promtail_enabled: true
+    monitoring_agents_promtail_loki_url: "http://127.0.0.1:3100"
+    monitoring_agents_promtail_bearer_token_file: "/etc/monitoring-agents/loki.token"
+    monitoring_agents_promtail_log_paths:
+      - "/tmp/molecule-promtail-agent.log"
+    monitoring_agents_promtail_extra_scrape_configs:
+      - job_name: "extra-file"
+        static_configs:
+          - targets:
+              - "localhost"
+            labels:
+              job: "extra-file"
+              __path__: "/tmp/molecule-promtail-extra.log"
+    monitoring_agents_cadvisor_enabled: false
+  pre_tasks:
+    - name: "Ensure monitoring group for token fixture"
+      ansible.builtin.group:
+        name: "{{ monitoring_agents_group }}"
+        system: true
+        state: present
+
+    - name: "Create monitoring configuration directory for token fixture"
+      ansible.builtin.file:
+        path: "{{ monitoring_agents_config_dir }}"
+        state: directory
+        owner: "root"
+        group: "{{ monitoring_agents_group }}"
+        mode: "0750"
+
+    - name: "Create promtail bearer token fixture"
+      ansible.builtin.copy:
+        dest: "{{ monitoring_agents_promtail_bearer_token_file }}"
+        content: "molecule-token\n"
+        owner: "root"
+        group: "{{ monitoring_agents_group }}"
+        mode: "0640"
+
+    - name: "Create promtail log fixtures"
+      ansible.builtin.copy:
+        dest: "{{ monitoring_agents_log_fixture.path }}"
+        content: "{{ monitoring_agents_log_fixture.content }}"
+        owner: "root"
+        group: "root"
+        mode: "0644"
+      loop:
+        - path: "/tmp/molecule-promtail-agent.log"
+          content: "agent log line\n"
+        - path: "/tmp/molecule-promtail-extra.log"
+          content: "extra log line\n"
+      loop_control:
+        loop_var: monitoring_agents_log_fixture
+        label: "{{ monitoring_agents_log_fixture.path }}"
+  roles:
+    - role: "bouola.monitoring_agents"

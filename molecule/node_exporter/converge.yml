@@ -1,0 +1,10 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    monitoring_agents_node_exporter_enabled: true
+    monitoring_agents_promtail_enabled: false
+    monitoring_agents_cadvisor_enabled: false
+  roles:
+    - role: "bouola.monitoring_agents"
