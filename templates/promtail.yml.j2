@@ -1,0 +1,26 @@
+server:
+  http_listen_port: {{ monitoring_agents_promtail_port }}
+  grpc_listen_port: 0
+
+positions:
+  filename: {{ monitoring_agents_state_dir }}/promtail.positions.yml
+
+clients:
+  - url: {{ monitoring_agents_promtail_loki_url | regex_replace('/$', '') }}/loki/api/v1/push
+{% if monitoring_agents_promtail_bearer_token_file | length > 0 %}
+    bearer_token_file: "{{ monitoring_agents_promtail_bearer_token_file }}"
+{% endif %}
+
+scrape_configs:
+{% for monitoring_agents_log_path in monitoring_agents_promtail_log_paths %}
+  - job_name: file-{{ loop.index }}
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: file-{{ loop.index }}
+          __path__: "{{ monitoring_agents_log_path }}"
+{% endfor %}
+{% if monitoring_agents_promtail_extra_scrape_configs | length > 0 %}
+{{ monitoring_agents_promtail_extra_scrape_configs | to_nice_yaml(indent=2) | indent(2, true) }}
+{% endif %}

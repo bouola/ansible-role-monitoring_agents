@@ -1,0 +1,42 @@
+---
+# Validate supported platform and enabled agent variables.
+- name: "Run validation tasks"
+  ansible.builtin.include_tasks:
+    file: validate.yml
+    apply:
+      tags:
+        - role-monitoring-agents-validate
+  tags:
+    - role-monitoring-agents-validate
+
+# Install, configure, and start node-exporter.
+- name: "Run node-exporter tasks"
+  ansible.builtin.include_tasks:
+    file: node_exporter.yml
+    apply:
+      tags:
+        - role-monitoring-agents-node-exporter
+  tags:
+    - role-monitoring-agents-node-exporter
+
+# Install, configure, and start promtail only when enabled.
+- name: "Run promtail tasks"
+  ansible.builtin.include_tasks:
+    file: promtail.yml
+    apply:
+      tags:
+        - role-monitoring-agents-promtail
+  tags:
+    - role-monitoring-agents-promtail
+  when: monitoring_agents_promtail_enabled
+
+# Install, configure, and start cAdvisor only when enabled.
+- name: "Run cadvisor tasks"
+  ansible.builtin.include_tasks:
+    file: cadvisor.yml
+    apply:
+      tags:
+        - role-monitoring-agents-cadvisor
+  tags:
+    - role-monitoring-agents-cadvisor
+  when: monitoring_agents_cadvisor_enabled

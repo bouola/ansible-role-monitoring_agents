@@ -1,0 +1,19 @@
+---
+- name: "Deploy monitoring agent systemd unit"
+  ansible.builtin.template:
+    src: "{{ monitoring_agents_agent_service_template }}"
+    dest: "{{ monitoring_agents_systemd_dir }}/{{ monitoring_agents_agent_service_name }}.service"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  notify: "Restart {{ monitoring_agents_agent_name }}"
+
+- name: "Flush monitoring agent restart handlers"
+  ansible.builtin.meta: flush_handlers
+
+- name: "Enable and start monitoring agent service"
+  ansible.builtin.systemd:
+    name: "{{ monitoring_agents_agent_service_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true

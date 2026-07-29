@@ -1,0 +1,9 @@
+---
+# Base URL for Prometheus project GitHub releases.
+monitoring_agents_prometheus_release_base_url: "https://github.com/prometheus"
+
+# Base URL for Grafana Loki GitHub releases.
+monitoring_agents_loki_release_base_url: "https://github.com/grafana/loki"
+
+# Base URL for cAdvisor GitHub releases.
+monitoring_agents_cadvisor_release_base_url: "https://github.com/google/cadvisor"

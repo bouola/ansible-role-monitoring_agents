@@ -1,0 +1,78 @@
+---
+- name: "Ensure monitoring agent group exists"
+  ansible.builtin.group:
+    name: "{{ monitoring_agents_group }}"
+    system: true
+    state: present
+
+- name: "Ensure monitoring agent user exists"
+  ansible.builtin.user:
+    name: "{{ monitoring_agents_user }}"
+    group: "{{ monitoring_agents_group }}"
+    system: true
+    shell: "{{ monitoring_agents_user_shell }}"
+    home: "/nonexistent"
+    create_home: false
+    password_lock: true
+    state: present
+
+- name: "Collect monitoring configuration directory state"
+  ansible.builtin.stat:
+    path: "{{ monitoring_agents_config_dir }}"
+  register: monitoring_agents_config_dir_state
+
+- name: "Fail when monitoring configuration path is not a directory"
+  ansible.builtin.fail:
+    msg: >-
+      Configuration path {{ monitoring_agents_config_dir }} exists but is not a directory.
+      Update monitoring_agents_config_dir or remove the conflicting path.
+  when:
+    - monitoring_agents_config_dir_state.stat.exists
+    - not monitoring_agents_config_dir_state.stat.isdir
+
+- name: "Create monitoring configuration directory"
+  ansible.builtin.file:
+    path: "{{ monitoring_agents_config_dir }}"
+    state: directory
+    owner: "root"
+    group: "{{ monitoring_agents_group }}"
+    mode: "0750"
+
+- name: "Collect monitoring state directory state"
+  ansible.builtin.stat:
+    path: "{{ monitoring_agents_state_dir }}"
+  register: monitoring_agents_state_dir_state
+
+- name: "Fail when monitoring state path is not a directory"
+  ansible.builtin.fail:
+    msg: >-
+      State path {{ monitoring_agents_state_dir }} exists but is not a directory.
+      Update monitoring_agents_state_dir or remove the conflicting path.
+  when:
+    - monitoring_agents_state_dir_state.stat.exists
+    - not monitoring_agents_state_dir_state.stat.isdir
+
+- name: "Create monitoring state directory"
+  ansible.builtin.file:
+    path: "{{ monitoring_agents_state_dir }}"
+    state: directory
+    owner: "{{ monitoring_agents_user }}"
+    group: "{{ monitoring_agents_group }}"
+    mode: "0750"
+
+- name: "Deploy monitoring agent configuration"
+  ansible.builtin.template:
+    src: "{{ monitoring_agents_agent_config_template }}"
+    dest: "{{ monitoring_agents_agent_config_dest }}"
+    owner: "root"
+    group: "{{ monitoring_agents_group }}"
+    mode: "0640"
+  notify: "Restart {{ monitoring_agents_agent_name }}"
+  when: monitoring_agents_agent_config_template | length > 0
+
+- name: "Report agent without configuration file"
+  ansible.builtin.debug:
+    msg: >-
+      {{ monitoring_agents_agent_name }} does not require a configuration file.
+      Configuration deployment is skipped.
+  when: monitoring_agents_agent_config_template | length == 0

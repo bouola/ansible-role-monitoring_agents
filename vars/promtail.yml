@@ -1,0 +1,35 @@
+---
+# Internal metadata used by shared install, configure, and systemd tasks.
+monitoring_agents_agent_name: "promtail"
+
+# promtail binary name installed on the target host.
+monitoring_agents_agent_binary: "promtail"
+
+# promtail systemd service name.
+monitoring_agents_agent_service_name: "promtail"
+
+# promtail version selected by the public role variable.
+monitoring_agents_agent_version: "{{ monitoring_agents_promtail_version }}"
+
+# promtail GitHub release archive name for the target architecture.
+monitoring_agents_agent_asset_name_template: "promtail-linux-{{ monitoring_agents_agent_arch }}.zip"
+
+# promtail binary path inside the release archive.
+monitoring_agents_agent_archive_member_template: "promtail-linux-{{ monitoring_agents_agent_arch }}"
+
+# promtail release archive download URL.
+monitoring_agents_agent_download_url_template: >-
+  {{ monitoring_agents_loki_release_base_url }}/releases/download/v{{ monitoring_agents_promtail_version }}/promtail-linux-{{ monitoring_agents_agent_arch }}.zip
+
+# promtail SHA256 checksum file URL.
+monitoring_agents_agent_checksum_template: >-
+  sha256:{{ monitoring_agents_loki_release_base_url }}/releases/download/v{{ monitoring_agents_promtail_version }}/SHA256SUMS
+
+# promtail configuration template.
+monitoring_agents_agent_config_template: "promtail.yml.j2"
+
+# promtail configuration file destination.
+monitoring_agents_agent_config_dest: "{{ monitoring_agents_config_dir }}/promtail.yml"
+
+# promtail systemd service template.
+monitoring_agents_agent_service_template: "promtail.service.j2"

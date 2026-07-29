@@ -1,0 +1,21 @@
+[Unit]
+Description=Grafana Promtail
+Documentation=https://grafana.com/docs/loki/latest/send-data/promtail/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User={{ monitoring_agents_user }}
+Group={{ monitoring_agents_group }}
+ExecStart={{ monitoring_agents_binary_install_dir }}/promtail --config.file={{ monitoring_agents_config_dir }}/promtail.yml
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+ProtectHome=read-only
+ProtectSystem=full
+ReadWritePaths={{ monitoring_agents_state_dir }}
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

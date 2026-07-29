@@ -1,0 +1,21 @@
+[Unit]
+Description=cAdvisor
+Documentation=https://github.com/google/cadvisor
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User={{ monitoring_agents_user }}
+Group={{ monitoring_agents_group }}
+EnvironmentFile={{ monitoring_agents_config_dir }}/cadvisor.env
+ExecStart={{ monitoring_agents_binary_install_dir }}/cadvisor $CADVISOR_ARGS
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

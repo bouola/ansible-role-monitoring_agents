@@ -1,0 +1,57 @@
+---
+- name: "Validate supported operating system"
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == "Debian"
+    fail_msg: >-
+      This role supports Debian-family operating systems only.
+      Current ansible_os_family is {{ ansible_os_family | default('<undefined>') }}.
+
+- name: "Build enabled monitoring agents list"
+  ansible.builtin.set_fact:
+    monitoring_agents_enabled_agents:
+      - name: "node-exporter"
+        version: "{{ monitoring_agents_node_exporter_version }}"
+        enabled: "{{ monitoring_agents_node_exporter_enabled }}"
+      - name: "promtail"
+        version: "{{ monitoring_agents_promtail_version }}"
+        enabled: "{{ monitoring_agents_promtail_enabled }}"
+      - name: "cadvisor"
+        version: "{{ monitoring_agents_cadvisor_version }}"
+        enabled: "{{ monitoring_agents_cadvisor_enabled }}"
+
+- name: "Validate enabled monitoring agent versions"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_agent.version is defined
+      - monitoring_agents_agent.version | string | length > 0
+    fail_msg: >-
+      The version for enabled agent {{ monitoring_agents_agent.name }} must be defined
+      and non-empty.
+  loop: "{{ monitoring_agents_enabled_agents | selectattr('enabled') }}"
+  loop_control:
+    loop_var: monitoring_agents_agent
+    label: "{{ monitoring_agents_agent.name }}"
+
+- name: "Validate promtail Loki URL when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_loki_url is string
+      - monitoring_agents_promtail_loki_url | length > 0
+    fail_msg: >-
+      monitoring_agents_promtail_loki_url must be a non-empty Loki URL when
+      monitoring_agents_promtail_enabled is true.
+  when: monitoring_agents_promtail_enabled
+
+- name: "Validate supported CPU architecture"
+  ansible.builtin.assert:
+    that:
+      - ansible_architecture in ["x86_64", "aarch64"]
+    fail_msg: >-
+      Unsupported architecture {{ ansible_architecture | default('<undefined>') }}.
+      Supported architectures are x86_64 and aarch64.
+
+- name: "Set monitoring agent architecture"
+  ansible.builtin.set_fact:
+    monitoring_agents_agent_arch: >-
+      {{ {'x86_64': 'amd64', 'aarch64': 'arm64'}[ansible_architecture] }}

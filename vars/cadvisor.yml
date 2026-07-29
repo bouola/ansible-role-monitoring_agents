@@ -1,0 +1,37 @@
+---
+# Internal metadata used by shared install, configure, and systemd tasks.
+monitoring_agents_agent_name: "cadvisor"
+
+# cAdvisor binary name installed on the target host.
+monitoring_agents_agent_binary: "cadvisor"
+
+# cAdvisor systemd service name.
+monitoring_agents_agent_service_name: "cadvisor"
+
+# cAdvisor version selected by the public role variable.
+monitoring_agents_agent_version: "{{ monitoring_agents_cadvisor_version }}"
+
+# cAdvisor GitHub release asset name for the target architecture.
+monitoring_agents_agent_asset_name_template: >-
+  cadvisor-v{{ monitoring_agents_cadvisor_version }}-linux-{{ monitoring_agents_agent_arch }}
+
+# Empty because the cAdvisor release asset is a direct binary.
+monitoring_agents_agent_archive_member_template: ""
+
+# cAdvisor binary download URL.
+monitoring_agents_agent_download_url_template: >-
+  {{ monitoring_agents_cadvisor_release_base_url }}/releases/download/v{{ monitoring_agents_cadvisor_version }}/cadvisor-v{{ monitoring_agents_cadvisor_version }}-linux-{{ monitoring_agents_agent_arch }}
+
+# cAdvisor SHA256 checksum selected from the public checksum map.
+monitoring_agents_agent_checksum_template: >-
+  sha256:{{ (monitoring_agents_cadvisor_checksums[monitoring_agents_cadvisor_version]
+  | default({}))[monitoring_agents_agent_arch] | default('') }}
+
+# cAdvisor environment template.
+monitoring_agents_agent_config_template: "cadvisor.env.j2"
+
+# cAdvisor environment file destination.
+monitoring_agents_agent_config_dest: "{{ monitoring_agents_config_dir }}/cadvisor.env"
+
+# cAdvisor systemd service template.
+monitoring_agents_agent_service_template: "cadvisor.service.j2"
