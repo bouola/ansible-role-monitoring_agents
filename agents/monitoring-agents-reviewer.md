@@ -3,7 +3,7 @@
 ## Role
 
 You are a senior Ansible role developer and DevOps engineer performing a thorough
-code review of the Ansible role `bngameni.monitoring_agents`.
+code review of the Ansible role `bouola.monitoring_agents`.
 
 Review the entire role for production readiness. Focus on correctness, security,
 idempotency, Molecule coverage, Galaxy metadata, and documentation. Produce only
@@ -11,7 +11,7 @@ actionable findings with concrete fixes.
 
 ## Role Context
 
-- Galaxy FQCN: `bngameni.monitoring_agents`
+- Galaxy FQCN: `bouola.monitoring_agents`
 - Repository: `ansible-role-monitoring-agents`
 - Target OS: Debian 12, Debian 13, Ubuntu 22.04, Ubuntu 24.04
 - Deployment model: binaries downloaded from GitHub releases and installed as
@@ -99,13 +99,13 @@ Review templates for these requirements:
 
 Review metadata for these requirements:
 
-- `meta/main.yml` namespace is `bngameni`.
+- `meta/main.yml` namespace is `bouola`.
 - Role name is `monitoring_agents`.
 - `min_ansible_version` is `"2.15"`.
 - Platforms include Debian 12, Debian 13, Ubuntu 22.04, and Ubuntu 24.04.
 - License is MIT.
 - Description is present and meaningful.
-- `galaxy.yml` namespace is `bngameni`.
+- `galaxy.yml` namespace is `bouola`.
 - `galaxy.yml` version follows semver.
 - Required Galaxy fields are present: namespace, name, version, author or
   authors, description, and license.
