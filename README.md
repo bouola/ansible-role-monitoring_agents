@@ -1,7 +1,7 @@
 # Ansible Role: monitoring_agents
 
 Deploy and manage node-exporter, promtail, and cAdvisor as systemd services using
-upstream release binaries. Docker is not used by this role.
+upstream release binaries.
 
 Galaxy FQCN: `bouola.monitoring_agents`
 
@@ -29,6 +29,8 @@ Galaxy FQCN: `bouola.monitoring_agents`
 | `monitoring_agents_node_exporter_port` | integer | `9100` | TCP port where node-exporter listens. |
 | `monitoring_agents_node_exporter_extra_args` | list | `[]` | Additional CLI flags passed to node-exporter. |
 | `monitoring_agents_promtail_enabled` | boolean | `false` | Whether promtail is installed and managed. |
+| `monitoring_agents_promtail_docker_enabled` | boolean | `false` | Whether promtail's runtime user is added to the `docker` group. This grants Docker-equivalent root access. |
+| `monitoring_agents_promtail_readable_paths` | list | `[]` | Existing paths granted read ACLs to promtail. Each entry requires `path`, `recursive`, and `default_acl`. |
 | `monitoring_agents_promtail_version` | string | `3.6.11` | Version of promtail to install. |
 | `monitoring_agents_promtail_port` | integer | `9080` | TCP port where promtail exposes its HTTP endpoint. |
 | `monitoring_agents_promtail_loki_url` | string | empty | Loki base URL used by promtail, for example `http://loki:3100`. Required when promtail is enabled. |
@@ -43,6 +45,15 @@ Galaxy FQCN: `bouola.monitoring_agents`
 
 Promtail is pinned to the latest Loki release that still publishes Promtail
 binary assets.
+
+When `monitoring_agents_promtail_docker_enabled` is `true`, Docker must already
+be installed and its `docker` group must exist. The role does not create it.
+
+Use `monitoring_agents_promtail_readable_paths` to grant Promtail read access
+without changing existing ownership or group permissions. Set `recursive: true`
+to update existing contents; set `default_acl: true` to grant access to future
+files created directly in the directory. Include parent directories as separate
+entries when they are not already traversable by the monitoring user.
 
 ## Dependencies
 
@@ -72,6 +83,11 @@ Full deployment with all agents enabled:
     monitoring_agents_promtail_enabled: true
     monitoring_agents_promtail_loki_url: "http://loki:3100"
     monitoring_agents_promtail_bearer_token_file: "/etc/monitoring-agents/loki.token"
+    monitoring_agents_promtail_docker_enabled: true
+    monitoring_agents_promtail_readable_paths:
+      - path: "/var/log/my-application"
+        recursive: true
+        default_acl: true
     monitoring_agents_promtail_log_paths:
       - "/var/log/*.log"
       - "/var/log/syslog"
