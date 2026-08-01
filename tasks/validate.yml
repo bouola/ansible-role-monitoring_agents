@@ -96,28 +96,24 @@
       - monitoring_agents_promtail_log_path.path is string
       - monitoring_agents_promtail_log_path.path | length > 0
       - monitoring_agents_promtail_log_path.labels | default({}) is mapping
+      - >-
+        (monitoring_agents_promtail_log_path.labels | default({}) | dict2items
+        | selectattr('key', 'match', '^[A-Za-z_][A-Za-z0-9_]*$') | list | length)
+        == (monitoring_agents_promtail_log_path.labels | default({}) | length)
+      - >-
+        (monitoring_agents_promtail_log_path.labels | default({}) | dict2items
+        | selectattr('value', 'string') | list | length)
+        == (monitoring_agents_promtail_log_path.labels | default({}) | length)
+      - >-
+        (monitoring_agents_promtail_log_path.labels | default({})).keys() | list
+        | intersect(["job", "host", "__path__"]) | length == 0
     fail_msg: >-
       Each monitoring_agents_promtail_log_paths entry must define a non-empty path
-      and an optional labels dictionary.
+      and optional labels with valid names, string values, and no reserved labels.
   loop: "{{ monitoring_agents_promtail_log_paths }}"
   loop_control:
     loop_var: monitoring_agents_promtail_log_path
     label: "{{ monitoring_agents_promtail_log_path.path | default('<missing path>') }}"
-  when: monitoring_agents_promtail_enabled
-
-- name: "Validate promtail log path label entries"
-  ansible.builtin.assert:
-    that:
-      - monitoring_agents_promtail_log_path_label.1.key is match('^[A-Za-z_][A-Za-z0-9_]*$')
-      - monitoring_agents_promtail_log_path_label.1.value is string
-      - monitoring_agents_promtail_log_path_label.1.key not in ["job", "host", "__path__"]
-    fail_msg: >-
-      Promtail labels must use valid label names and string values. The job, host,
-      and __path__ labels are reserved by this role.
-  loop: "{{ monitoring_agents_promtail_log_paths | subelements('labels', skip_missing=True) }}"
-  loop_control:
-    loop_var: monitoring_agents_promtail_log_path_label
-    label: "{{ monitoring_agents_promtail_log_path_label.1.key }}"
   when: monitoring_agents_promtail_enabled
 
 - name: "Validate supported CPU architecture"
