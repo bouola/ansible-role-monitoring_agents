@@ -35,7 +35,8 @@ Galaxy FQCN: `bouola.monitoring_agents`
 | `monitoring_agents_promtail_port` | integer | `9080` | TCP port where promtail exposes its HTTP endpoint. |
 | `monitoring_agents_promtail_loki_url` | string | empty | Loki base URL used by promtail, for example `http://loki:3100`. Required when promtail is enabled. |
 | `monitoring_agents_promtail_bearer_token_file` | string | empty | Bearer token file used by promtail when pushing to Loki. |
-| `monitoring_agents_promtail_log_paths` | list | `[]` | List of log file paths scraped by promtail. |
+| `monitoring_agents_promtail_default_labels` | dict | `{}` | Labels added to every file scrape configuration. Per-path labels override matching defaults. |
+| `monitoring_agents_promtail_log_paths` | list | `[]` | File scrape configurations. Each entry requires `path` and optionally accepts `labels`. |
 | `monitoring_agents_promtail_extra_scrape_configs` | list | `[]` | Additional promtail `scrape_configs` entries. |
 | `monitoring_agents_cadvisor_enabled` | boolean | `false` | Whether cAdvisor is installed and managed. |
 | `monitoring_agents_cadvisor_version` | string | `0.60.5` | Version of cAdvisor to install. |
@@ -84,13 +85,17 @@ Full deployment with all agents enabled:
     monitoring_agents_promtail_loki_url: "http://loki:3100"
     monitoring_agents_promtail_bearer_token_file: "/etc/monitoring-agents/loki.token"
     monitoring_agents_promtail_docker_enabled: true
+    monitoring_agents_promtail_default_labels:
+      environment: "production"
+      team: "platform"
+    monitoring_agents_promtail_log_paths:
+      - path: "/var/log/my-application/*.log"
+        labels:
+          application: "my-application"
     monitoring_agents_promtail_readable_paths:
       - path: "/var/log/my-application"
         recursive: true
         default_acl: true
-    monitoring_agents_promtail_log_paths:
-      - "/var/log/*.log"
-      - "/var/log/syslog"
     monitoring_agents_cadvisor_enabled: true
     monitoring_agents_node_exporter_extra_args:
       - "--collector.systemd"
