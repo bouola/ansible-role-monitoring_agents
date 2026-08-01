@@ -91,6 +91,19 @@
         monitoring_agents_promtail_config_data: >-
           {{ monitoring_agents_promtail_config.content | b64decode | from_yaml }}
 
+    - name: "Assert promtail file scrape labels"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_promtail_config_data.scrape_configs[0].job_name == "file-tmp-molecule-promtail-agent-log"
+          - monitoring_agents_promtail_config_data.scrape_configs[0].static_configs[0].labels.job == "file-tmp-molecule-promtail-agent-log"
+          - monitoring_agents_promtail_config_data.scrape_configs[0].static_configs[0].labels.host == ansible_facts["hostname"]
+          - monitoring_agents_promtail_config_data.scrape_configs[0].static_configs[0].labels.environment == "test"
+          - monitoring_agents_promtail_config_data.scrape_configs[0].static_configs[0].labels.team == "observability"
+          - monitoring_agents_promtail_config_data.scrape_configs[0].static_configs[0].labels.application == "promtail-agent"
+          - monitoring_agents_promtail_config_data.scrape_configs[0].static_configs[0].labels.__path__ == "/tmp/molecule-promtail-agent.log"
+        fail_msg: >-
+          Promtail file scrape labels do not match the configured defaults and path labels.
+
     - name: "Wait for promtail port"
       ansible.builtin.wait_for:
         port: "{{ monitoring_agents_promtail_port }}"

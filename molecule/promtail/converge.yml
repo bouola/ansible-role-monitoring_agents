@@ -12,8 +12,14 @@
         default_acl: true
     monitoring_agents_promtail_loki_url: "http://127.0.0.1:3100"
     monitoring_agents_promtail_bearer_token_file: "/etc/monitoring-agents/loki.token"
+    monitoring_agents_promtail_default_labels:
+      environment: "test"
+      team: "platform"
     monitoring_agents_promtail_log_paths:
-      - "/tmp/molecule-promtail-agent.log"
+      - path: "/tmp/molecule-promtail-agent.log"
+        labels:
+          application: "promtail-agent"
+          team: "observability"
     monitoring_agents_promtail_extra_scrape_configs:
       - job_name: "extra-file"
         static_configs:
