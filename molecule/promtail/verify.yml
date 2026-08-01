@@ -10,6 +10,46 @@
   vars:
     monitoring_agents_promtail_bearer_token_file: "/etc/monitoring-agents/loki.token"
   tasks:
+    - name: "Collect Docker group membership"
+      ansible.builtin.getent:
+        database: group
+        key: "docker"
+
+    - name: "Assert monitoring user belongs to Docker group"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_user in ansible_facts.getent_group.docker[2].split(',')
+        fail_msg: >-
+          Monitoring user {{ monitoring_agents_user }} is not a member of the Docker group.
+
+    - name: "Read restricted log as monitoring user"
+      ansible.builtin.command:
+        cmd: "cat /tmp/molecule-promtail-readable/application.log"
+      become: true
+      become_user: "{{ monitoring_agents_user }}"
+      changed_when: false
+      register: monitoring_agents_restricted_log
+
+    - name: "Assert monitoring user can read restricted log"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_restricted_log.stdout == "restricted log line"
+        fail_msg: >-
+          Monitoring user {{ monitoring_agents_user }} cannot read the restricted log.
+
+    - name: "Collect default ACL for promtail readable directory"
+      ansible.posix.acl:
+        path: "/tmp/molecule-promtail-readable"
+        state: "query"
+      register: monitoring_agents_readable_directory_acl
+
+    - name: "Assert promtail default ACL exists"
+      ansible.builtin.assert:
+        that:
+          - "'default:user:' ~ monitoring_agents_user ~ ':r-x' in monitoring_agents_readable_directory_acl.acl"
+        fail_msg: >-
+          Promtail readable directory does not grant the monitoring user a default read ACL.
+
     - name: "Collect promtail binary state"
       ansible.builtin.stat:
         path: "{{ monitoring_agents_binary_install_dir }}/promtail"

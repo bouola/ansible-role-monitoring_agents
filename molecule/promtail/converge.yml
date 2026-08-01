@@ -5,6 +5,11 @@
   vars:
     monitoring_agents_node_exporter_enabled: false
     monitoring_agents_promtail_enabled: true
+    monitoring_agents_promtail_docker_enabled: true
+    monitoring_agents_promtail_readable_paths:
+      - path: "/tmp/molecule-promtail-readable"
+        recursive: true
+        default_acl: true
     monitoring_agents_promtail_loki_url: "http://127.0.0.1:3100"
     monitoring_agents_promtail_bearer_token_file: "/etc/monitoring-agents/loki.token"
     monitoring_agents_promtail_log_paths:
@@ -19,6 +24,16 @@
               __path__: "/tmp/molecule-promtail-extra.log"
     monitoring_agents_cadvisor_enabled: false
   pre_tasks:
+    - name: "Collect restricted promtail readable directory state"
+      ansible.builtin.stat:
+        path: "/tmp/molecule-promtail-readable"
+      register: monitoring_agents_restricted_directory
+
+    - name: "Ensure Docker group exists for fixture"
+      ansible.builtin.group:
+        name: "docker"
+        state: present
+
     - name: "Ensure monitoring group for token fixture"
       ansible.builtin.group:
         name: "{{ monitoring_agents_group }}"
@@ -56,5 +71,28 @@
       loop_control:
         loop_var: monitoring_agents_log_fixture
         label: "{{ monitoring_agents_log_fixture.path }}"
+
+    - name: "Create restricted promtail readable directory"
+      ansible.builtin.file:
+        path: "/tmp/molecule-promtail-readable"
+        state: directory
+        owner: "root"
+        group: "root"
+        mode: "0700"
+      when: not monitoring_agents_restricted_directory.stat.exists
+
+    - name: "Collect restricted promtail readable file state"
+      ansible.builtin.stat:
+        path: "/tmp/molecule-promtail-readable/application.log"
+      register: monitoring_agents_restricted_file
+
+    - name: "Create restricted promtail readable file"
+      ansible.builtin.copy:
+        dest: "/tmp/molecule-promtail-readable/application.log"
+        content: "restricted log line\n"
+        owner: "root"
+        group: "root"
+        mode: "0600"
+      when: not monitoring_agents_restricted_file.stat.exists
   roles:
     - role: "bouola.monitoring_agents"
