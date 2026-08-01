@@ -64,6 +64,62 @@
     label: "{{ monitoring_agents_promtail_readable_path.path | default('<missing path>') }}"
   when: monitoring_agents_promtail_enabled
 
+- name: "Validate promtail default labels"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_default_labels is mapping
+    fail_msg: >-
+      monitoring_agents_promtail_default_labels must be a dictionary of label names
+      and string values.
+  when: monitoring_agents_promtail_enabled
+
+- name: "Validate promtail default label entries"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_label.key is match('^[A-Za-z_][A-Za-z0-9_]*$')
+      - monitoring_agents_promtail_label.value is string
+      - monitoring_agents_promtail_label.key not in ["job", "host", "__path__"]
+    fail_msg: >-
+      Promtail labels must use valid label names and string values. The job, host,
+      and __path__ labels are reserved by this role.
+  loop: "{{ monitoring_agents_promtail_default_labels | dict2items }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_label
+    label: "{{ monitoring_agents_promtail_label.key }}"
+  when: monitoring_agents_promtail_enabled
+
+- name: "Validate promtail log path configuration"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_log_path is mapping
+      - monitoring_agents_promtail_log_path.path is defined
+      - monitoring_agents_promtail_log_path.path is string
+      - monitoring_agents_promtail_log_path.path | length > 0
+      - monitoring_agents_promtail_log_path.labels | default({}) is mapping
+    fail_msg: >-
+      Each monitoring_agents_promtail_log_paths entry must define a non-empty path
+      and an optional labels dictionary.
+  loop: "{{ monitoring_agents_promtail_log_paths }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_log_path
+    label: "{{ monitoring_agents_promtail_log_path.path | default('<missing path>') }}"
+  when: monitoring_agents_promtail_enabled
+
+- name: "Validate promtail log path label entries"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_log_path_label.1.key is match('^[A-Za-z_][A-Za-z0-9_]*$')
+      - monitoring_agents_promtail_log_path_label.1.value is string
+      - monitoring_agents_promtail_log_path_label.1.key not in ["job", "host", "__path__"]
+    fail_msg: >-
+      Promtail labels must use valid label names and string values. The job, host,
+      and __path__ labels are reserved by this role.
+  loop: "{{ monitoring_agents_promtail_log_paths | subelements('labels', skip_missing=True) }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_log_path_label
+    label: "{{ monitoring_agents_promtail_log_path_label.1.key }}"
+  when: monitoring_agents_promtail_enabled
+
 - name: "Validate supported CPU architecture"
   ansible.builtin.assert:
     that:

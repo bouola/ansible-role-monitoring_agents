@@ -13,13 +13,19 @@ clients:
 
 scrape_configs:
 {% for monitoring_agents_log_path in monitoring_agents_promtail_log_paths %}
-  - job_name: file-{{ loop.index }}
+{% set monitoring_agents_log_path_name = monitoring_agents_log_path.path | regex_replace('^/+', '') | regex_replace('[^A-Za-z0-9]+', '-') | regex_replace('^-|-$', '') %}
+{% set monitoring_agents_log_labels = monitoring_agents_promtail_default_labels | combine(monitoring_agents_log_path.labels | default({})) %}
+  - job_name: "file-{{ monitoring_agents_log_path_name }}"
     static_configs:
       - targets:
           - localhost
         labels:
-          job: file-{{ loop.index }}
-          __path__: "{{ monitoring_agents_log_path }}"
+          job: "file-{{ monitoring_agents_log_path_name }}"
+          host: "{{ ansible_facts["hostname"] }}"
+{% for monitoring_agents_log_label in monitoring_agents_log_labels | dictsort %}
+          {{ monitoring_agents_log_label.0 }}: {{ monitoring_agents_log_label.1 | string | to_json }}
+{% endfor %}
+          __path__: "{{ monitoring_agents_log_path.path }}"
 {% endfor %}
 {% if monitoring_agents_promtail_extra_scrape_configs | length > 0 %}
 {{ monitoring_agents_promtail_extra_scrape_configs | to_nice_yaml(indent=2) | indent(2, true) }}

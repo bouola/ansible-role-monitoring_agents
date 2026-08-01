@@ -53,7 +53,10 @@ monitoring_agents_promtail_loki_url: ""
 # Bearer token file used by promtail when pushing to Loki.
 monitoring_agents_promtail_bearer_token_file: ""
 
-# List of log file paths scraped by promtail.
+# Labels added to every Promtail file scrape configuration.
+monitoring_agents_promtail_default_labels: {}
+
+# File scrape configurations with path and optional labels.
 monitoring_agents_promtail_log_paths: []
 
 # Additional promtail scrape_configs entries.
