@@ -16,6 +16,185 @@
     password_lock: true
     state: present
 
+- name: "Collect Docker group state for promtail"
+  ansible.builtin.getent:
+    database: "group"
+    key: "docker"
+  register: monitoring_agents_docker_group
+  failed_when: false
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_docker_enabled
+
+- name: "Fail when Docker group is absent for promtail"
+  ansible.builtin.assert:
+    that:
+      - not monitoring_agents_docker_group.failed
+      - ansible_facts.getent_group.docker is defined
+    fail_msg: >-
+      monitoring_agents_promtail_docker_enabled requires the docker group to exist.
+      Install and configure Docker before enabling Promtail Docker log access.
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_docker_enabled
+
+- name: "Add monitoring agent user to Docker group for promtail"
+  ansible.builtin.user:
+    name: "{{ monitoring_agents_user }}"
+    groups: "docker"
+    append: true
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_docker_enabled
+
+- name: "Collect promtail readable path state"
+  ansible.builtin.stat:
+    path: "{{ monitoring_agents_promtail_readable_path.path }}"
+  loop: "{{ monitoring_agents_promtail_readable_paths }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_readable_path
+    label: "{{ monitoring_agents_promtail_readable_path.path }}"
+  register: monitoring_agents_promtail_readable_path_states
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_readable_paths | length > 0
+
+- name: "Fail when promtail readable path is absent"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_readable_path_state.stat.exists
+    fail_msg: >-
+      Promtail readable path {{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}
+      does not exist. Create it before granting Promtail access.
+  loop: "{{ monitoring_agents_promtail_readable_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_readable_path_state
+    label: "{{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}"
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_readable_paths | length > 0
+
+- name: "Fail when default ACL is requested for a non-directory"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_readable_path_state.stat.isdir
+    fail_msg: >-
+      Promtail readable path {{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}
+      must be a directory when default_acl is true.
+  loop: "{{ monitoring_agents_promtail_readable_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_readable_path_state
+    label: "{{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}"
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_readable_paths | length > 0
+    - monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.default_acl
+
+- name: "Install ACL utilities for promtail readable paths"
+  ansible.builtin.apt:
+    name: "acl"
+    state: present
+    update_cache: true
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_readable_paths | length > 0
+
+- name: "Grant promtail read access to configured paths"
+  ansible.posix.acl:
+    path: "{{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}"
+    entity: "{{ monitoring_agents_user }}"
+    etype: "user"
+    permissions: "{{ 'rx' if monitoring_agents_promtail_readable_path_state.stat.isdir else 'r' }}"
+    state: "present"
+  loop: "{{ monitoring_agents_promtail_readable_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_readable_path_state
+    label: "{{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}"
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_readable_paths | length > 0
+
+- name: "Collect recursive promtail readable directories"
+  ansible.builtin.find:
+    paths: "{{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}"
+    file_type: "directory"
+    recurse: true
+  loop: "{{ monitoring_agents_promtail_readable_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_readable_path_state
+    label: "{{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}"
+  register: monitoring_agents_promtail_readable_directory_states
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_readable_path_state.stat.isdir
+    - monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.recursive
+
+- name: "Grant promtail traversal access to recursive directories"
+  ansible.posix.acl:
+    path: "{{ monitoring_agents_promtail_readable_directory.path }}"
+    entity: "{{ monitoring_agents_user }}"
+    etype: "user"
+    permissions: "rx"
+    state: "present"
+  loop: >-
+    {{ monitoring_agents_promtail_readable_directory_states.results
+    | selectattr('files', 'defined') | map(attribute='files') | flatten }}
+  loop_control:
+    loop_var: monitoring_agents_promtail_readable_directory
+    label: "{{ monitoring_agents_promtail_readable_directory.path }}"
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_readable_paths | length > 0
+
+- name: "Collect recursive promtail readable files"
+  ansible.builtin.find:
+    paths: "{{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}"
+    file_type: "file"
+    recurse: true
+  loop: "{{ monitoring_agents_promtail_readable_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_readable_path_state
+    label: "{{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}"
+  register: monitoring_agents_promtail_readable_file_states
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_readable_path_state.stat.isdir
+    - monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.recursive
+
+- name: "Grant promtail read access to recursive files"
+  ansible.posix.acl:
+    path: "{{ monitoring_agents_promtail_readable_file.path }}"
+    entity: "{{ monitoring_agents_user }}"
+    etype: "user"
+    permissions: "r"
+    state: "present"
+  loop: >-
+    {{ monitoring_agents_promtail_readable_file_states.results
+    | selectattr('files', 'defined') | map(attribute='files') | flatten }}
+  loop_control:
+    loop_var: monitoring_agents_promtail_readable_file
+    label: "{{ monitoring_agents_promtail_readable_file.path }}"
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_readable_paths | length > 0
+
+- name: "Grant promtail default read access to configured directories"
+  ansible.posix.acl:
+    path: "{{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}"
+    entity: "{{ monitoring_agents_user }}"
+    etype: "user"
+    permissions: "rX"
+    default: true
+    state: "present"
+  loop: "{{ monitoring_agents_promtail_readable_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_readable_path_state
+    label: "{{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}"
+  when:
+    - monitoring_agents_promtail_enabled
+    - monitoring_agents_promtail_readable_paths | length > 0
+    - monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.default_acl
+
 - name: "Collect monitoring configuration directory state"
   ansible.builtin.stat:
     path: "{{ monitoring_agents_config_dir }}"

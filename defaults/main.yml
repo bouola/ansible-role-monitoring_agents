@@ -35,6 +35,12 @@ monitoring_agents_node_exporter_extra_args: []
 # Whether promtail is installed and managed.
 monitoring_agents_promtail_enabled: false
 
+# Whether promtail may read Docker container logs through Docker group membership.
+monitoring_agents_promtail_docker_enabled: false
+
+# Paths where promtail receives targeted read ACLs.
+monitoring_agents_promtail_readable_paths: []
+
 # Version of promtail to install.
 monitoring_agents_promtail_version: "3.6.11"
 
