@@ -24,13 +24,13 @@ Galaxy FQCN: `bouola.monitoring_agents`
 | `monitoring_agents_user` | string | `monitoring-agent` | System user used to run all monitoring agents. |
 | `monitoring_agents_group` | string | `monitoring-agent` | System group used to run all monitoring agents. |
 | `monitoring_agents_user_shell` | string | `/usr/sbin/nologin` | Login shell assigned to the monitoring agent system user. |
+| `monitoring_agents_acl_paths` | list | `[]` | Existing paths granted ACLs for `monitoring_agents_group`. Each entry requires `path`, `permissions`, `recursive`, and `default_acl`. |
 | `monitoring_agents_node_exporter_enabled` | boolean | `true` | Whether node-exporter is installed and managed. |
 | `monitoring_agents_node_exporter_version` | string | `1.12.1` | Version of node-exporter to install. |
 | `monitoring_agents_node_exporter_port` | integer | `9100` | TCP port where node-exporter listens. |
 | `monitoring_agents_node_exporter_extra_args` | list | `[]` | Additional CLI flags passed to node-exporter. |
 | `monitoring_agents_promtail_enabled` | boolean | `false` | Whether promtail is installed and managed. |
 | `monitoring_agents_promtail_docker_enabled` | boolean | `false` | Whether promtail's runtime user is added to the `docker` group. This grants Docker-equivalent root access. |
-| `monitoring_agents_promtail_readable_paths` | list | `[]` | Existing paths granted read ACLs to promtail. Each entry requires `path`, `recursive`, and `default_acl`. |
 | `monitoring_agents_promtail_version` | string | `3.6.11` | Version of promtail to install. |
 | `monitoring_agents_promtail_port` | integer | `9080` | TCP port where promtail exposes its HTTP endpoint. |
 | `monitoring_agents_promtail_loki_url` | string | empty | Loki base URL used by promtail, for example `http://loki:3100`. Required when promtail is enabled. |
@@ -50,11 +50,32 @@ binary assets.
 When `monitoring_agents_promtail_docker_enabled` is `true`, Docker must already
 be installed and its `docker` group must exist. The role does not create it.
 
-Use `monitoring_agents_promtail_readable_paths` to grant Promtail read access
-without changing existing ownership or group permissions. Set `recursive: true`
-to update existing contents; set `default_acl: true` to grant access to future
-files created directly in the directory. Include parent directories as separate
-entries when they are not already traversable by the monitoring user.
+Use `monitoring_agents_acl_paths` to grant the shared monitoring group access
+without changing existing ownership or group permissions. Configuring one or
+more entries installs the `acl` package. Use `rX` for a readable directory tree:
+it grants execute only to directories and executable files. Include parent
+directories as separate entries when they are not already traversable by the
+monitoring group.
+
+Runtime socket ACLs are ephemeral: Docker, containerd, or the host can recreate
+a socket without its ACL. Rerun this role or manage persistence with a
+runtime-specific systemd drop-in.
+
+```yaml
+monitoring_agents_acl_paths:
+  - path: "/var/log/my-application"
+    permissions: "rX"
+    recursive: true
+    default_acl: true
+  - path: "/var/run/docker.sock"
+    permissions: "rw"
+    recursive: false
+    default_acl: false
+  - path: "/run/containerd/containerd.sock"
+    permissions: "rw"
+    recursive: false
+    default_acl: false
+```
 
 ## Dependencies
 
@@ -92,10 +113,19 @@ Full deployment with all agents enabled:
       - path: "/var/log/my-application/*.log"
         labels:
           application: "my-application"
-    monitoring_agents_promtail_readable_paths:
+    monitoring_agents_acl_paths:
       - path: "/var/log/my-application"
+        permissions: "rX"
         recursive: true
         default_acl: true
+      - path: "/var/run/docker.sock"
+        permissions: "rw"
+        recursive: false
+        default_acl: false
+      - path: "/run/containerd/containerd.sock"
+        permissions: "rw"
+        recursive: false
+        default_acl: false
     monitoring_agents_cadvisor_enabled: true
     monitoring_agents_node_exporter_extra_args:
       - "--collector.systemd"
