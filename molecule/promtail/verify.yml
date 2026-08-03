@@ -43,12 +43,12 @@
         state: "query"
       register: monitoring_agents_readable_directory_acl
 
-    - name: "Assert promtail default ACL exists"
+    - name: "Assert promtail default group ACL exists"
       ansible.builtin.assert:
         that:
-          - "'default:user:' ~ monitoring_agents_user ~ ':r-x' in monitoring_agents_readable_directory_acl.acl"
+          - "'default:group:' ~ monitoring_agents_group ~ ':r-x' in monitoring_agents_readable_directory_acl.acl"
         fail_msg: >-
-          Promtail readable directory does not grant the monitoring user a default read ACL.
+          Promtail readable directory does not grant the monitoring group a default read ACL.
 
     - name: "Collect promtail binary state"
       ansible.builtin.stat:

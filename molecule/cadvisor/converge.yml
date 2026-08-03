@@ -6,8 +6,11 @@
     monitoring_agents_node_exporter_enabled: false
     monitoring_agents_promtail_enabled: false
     monitoring_agents_cadvisor_enabled: true
-    monitoring_agents_cadvisor_socket_acl_paths:
+    monitoring_agents_acl_paths:
       - path: "/tmp/molecule-cadvisor-runtime.sock"
+        permissions: "rw"
+        recursive: false
+        default_acl: false
   pre_tasks:
     - name: "Collect cAdvisor runtime socket fixture state"
       ansible.builtin.stat:
@@ -22,6 +25,7 @@
           - >-
             import socket; socket.socket(socket.AF_UNIX).bind('/tmp/molecule-cadvisor-runtime.sock')
       changed_when: true
+      check_mode: false
       when: not monitoring_agents_cadvisor_runtime_socket.stat.exists
   roles:
     - role: "bouola.monitoring_agents"

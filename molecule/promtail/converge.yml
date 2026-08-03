@@ -6,8 +6,9 @@
     monitoring_agents_node_exporter_enabled: false
     monitoring_agents_promtail_enabled: true
     monitoring_agents_promtail_docker_enabled: true
-    monitoring_agents_promtail_readable_paths:
+    monitoring_agents_acl_paths:
       - path: "/tmp/molecule-promtail-readable"
+        permissions: "rX"
         recursive: true
         default_acl: true
     monitoring_agents_promtail_loki_url: "http://127.0.0.1:3100"
