@@ -9,6 +9,18 @@
   tags:
     - role-monitoring-agents-validate
 
+# Install ACL utilities once when Promtail or cAdvisor ACLs are configured.
+- name: "Run shared ACL tasks"
+  ansible.builtin.include_tasks:
+    file: acl.yml
+    apply:
+      tags:
+        - role-monitoring-agents-promtail
+        - role-monitoring-agents-cadvisor
+  tags:
+    - role-monitoring-agents-promtail
+    - role-monitoring-agents-cadvisor
+
 # Install, configure, and start node-exporter.
 - name: "Run node-exporter tasks"
   ansible.builtin.include_tasks:

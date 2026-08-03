@@ -74,6 +74,10 @@ monitoring_agents_cadvisor_port: 8080
 # Additional CLI flags passed to cAdvisor.
 monitoring_agents_cadvisor_extra_args: []
 
+# Existing Unix sockets granted read/write ACLs for cAdvisor container discovery.
+# Each entry requires a non-empty path, for example /var/run/docker.sock.
+monitoring_agents_cadvisor_socket_acl_paths: []
+
 # SHA256 checksums for cAdvisor release binaries by version and architecture.
 monitoring_agents_cadvisor_checksums:
   "0.60.5":

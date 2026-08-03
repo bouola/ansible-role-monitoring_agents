@@ -90,15 +90,6 @@
     - monitoring_agents_promtail_readable_paths | length > 0
     - monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.default_acl
 
-- name: "Install ACL utilities for promtail readable paths"
-  ansible.builtin.apt:
-    name: "acl"
-    state: present
-    update_cache: true
-  when:
-    - monitoring_agents_promtail_enabled
-    - monitoring_agents_promtail_readable_paths | length > 0
-
 - name: "Grant promtail read access to configured paths"
   ansible.posix.acl:
     path: "{{ monitoring_agents_promtail_readable_path_state.monitoring_agents_promtail_readable_path.path }}"

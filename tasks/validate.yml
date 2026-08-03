@@ -116,6 +116,23 @@
     label: "{{ monitoring_agents_promtail_log_path.path | default('<missing path>') }}"
   when: monitoring_agents_promtail_enabled
 
+- name: "Validate cAdvisor socket ACL path configuration"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_cadvisor_socket_acl_paths is sequence
+      - monitoring_agents_cadvisor_socket_acl_path is mapping
+      - monitoring_agents_cadvisor_socket_acl_path.path is defined
+      - monitoring_agents_cadvisor_socket_acl_path.path is string
+      - monitoring_agents_cadvisor_socket_acl_path.path | length > 0
+    fail_msg: >-
+      Each monitoring_agents_cadvisor_socket_acl_paths entry must define a non-empty
+      socket path.
+  loop: "{{ monitoring_agents_cadvisor_socket_acl_paths }}"
+  loop_control:
+    loop_var: monitoring_agents_cadvisor_socket_acl_path
+    label: "{{ monitoring_agents_cadvisor_socket_acl_path.path | default('<missing path>') }}"
+  when: monitoring_agents_cadvisor_enabled
+
 - name: "Validate supported CPU architecture"
   ansible.builtin.assert:
     that:

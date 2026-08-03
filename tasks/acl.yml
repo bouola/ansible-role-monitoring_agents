@@ -1,0 +1,9 @@
+---
+- name: "Install ACL utilities when agent ACLs are configured"
+  ansible.builtin.apt:
+    name: "acl"
+    state: present
+    update_cache: true
+  when: >-
+    (monitoring_agents_promtail_enabled and monitoring_agents_promtail_readable_paths | length > 0)
+    or (monitoring_agents_cadvisor_enabled and monitoring_agents_cadvisor_socket_acl_paths | length > 0)
