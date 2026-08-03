@@ -8,6 +8,19 @@
       | default(lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY')
       | dirname | dirname, true) }}/defaults/main.yml
   tasks:
+    - name: "Collect cAdvisor runtime socket ACL"
+      ansible.posix.acl:
+        path: "/tmp/molecule-cadvisor-runtime.sock"
+        state: "query"
+      register: monitoring_agents_cadvisor_runtime_socket_acl
+
+    - name: "Assert cAdvisor runtime socket ACL"
+      ansible.builtin.assert:
+        that:
+          - "'user:' ~ monitoring_agents_user ~ ':rw-' in monitoring_agents_cadvisor_runtime_socket_acl.acl"
+        fail_msg: >-
+          cAdvisor runtime socket does not grant {{ monitoring_agents_user }} read/write access.
+
     - name: "Collect cAdvisor binary state"
       ansible.builtin.stat:
         path: "{{ monitoring_agents_binary_install_dir }}/cadvisor"
