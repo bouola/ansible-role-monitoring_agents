@@ -19,46 +19,9 @@
 - name: "Include cAdvisor install tasks"
   ansible.builtin.include_tasks: install.yml
 
-# Deploy cAdvisor environment file and shared runtime user/group.
+# Deploy cAdvisor environment file.
 - name: "Include cAdvisor configure tasks"
   ansible.builtin.include_tasks: configure.yml
-
-# Runtime socket ACLs disappear when Docker, containerd, or the host recreates the socket.
-# Rerun this role, or manage persistence outside this role with a runtime-specific systemd drop-in.
-- name: "Collect cAdvisor container runtime socket state"
-  ansible.builtin.stat:
-    path: "{{ monitoring_agents_cadvisor_socket_acl_path.path }}"
-  loop: "{{ monitoring_agents_cadvisor_socket_acl_paths }}"
-  loop_control:
-    loop_var: monitoring_agents_cadvisor_socket_acl_path
-    label: "{{ monitoring_agents_cadvisor_socket_acl_path.path }}"
-  register: monitoring_agents_cadvisor_socket_acl_path_states
-
-- name: "Fail when cAdvisor container runtime socket is invalid"
-  ansible.builtin.assert:
-    that:
-      - monitoring_agents_cadvisor_socket_acl_path_state.stat.exists
-      - monitoring_agents_cadvisor_socket_acl_path_state.stat.issock | default(false)
-    fail_msg: >-
-      cAdvisor socket ACL path {{ monitoring_agents_cadvisor_socket_acl_path_state.monitoring_agents_cadvisor_socket_acl_path.path }}
-      must exist and be a Unix socket.
-  loop: "{{ monitoring_agents_cadvisor_socket_acl_path_states.results }}"
-  loop_control:
-    loop_var: monitoring_agents_cadvisor_socket_acl_path_state
-    label: "{{ monitoring_agents_cadvisor_socket_acl_path_state.monitoring_agents_cadvisor_socket_acl_path.path }}"
-
-- name: "Grant cAdvisor access to container runtime sockets"
-  ansible.posix.acl:
-    path: "{{ monitoring_agents_cadvisor_socket_acl_path_state.monitoring_agents_cadvisor_socket_acl_path.path }}"
-    entity: "{{ monitoring_agents_user }}"
-    etype: "user"
-    permissions: "rw"
-    state: "present"
-  loop: "{{ monitoring_agents_cadvisor_socket_acl_path_states.results }}"
-  loop_control:
-    loop_var: monitoring_agents_cadvisor_socket_acl_path_state
-    label: "{{ monitoring_agents_cadvisor_socket_acl_path_state.monitoring_agents_cadvisor_socket_acl_path.path }}"
-  notify: "Restart cadvisor"
 
 # Deploy, reload, enable, and start the cAdvisor systemd service.
 - name: "Include cAdvisor systemd tasks"

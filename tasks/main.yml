@@ -9,17 +9,43 @@
   tags:
     - role-monitoring-agents-validate
 
-# Install ACL utilities once when Promtail or cAdvisor ACLs are configured.
+# Create the shared runtime identity before managing agent resources.
+- name: "Run shared runtime tasks"
+  ansible.builtin.include_tasks:
+    file: runtime.yml
+    apply:
+      tags:
+        - role-monitoring-agents-acl
+        - role-monitoring-agents-node-exporter
+        - role-monitoring-agents-promtail
+        - role-monitoring-agents-cadvisor
+  tags:
+    - role-monitoring-agents-acl
+    - role-monitoring-agents-node-exporter
+    - role-monitoring-agents-promtail
+    - role-monitoring-agents-cadvisor
+  when: >-
+    monitoring_agents_node_exporter_enabled or monitoring_agents_promtail_enabled
+    or monitoring_agents_cadvisor_enabled
+
+# Install ACL utilities and grant configured path access once.
 - name: "Run shared ACL tasks"
   ansible.builtin.include_tasks:
     file: acl.yml
     apply:
       tags:
+        - role-monitoring-agents-acl
+        - role-monitoring-agents-node-exporter
         - role-monitoring-agents-promtail
         - role-monitoring-agents-cadvisor
   tags:
+    - role-monitoring-agents-acl
+    - role-monitoring-agents-node-exporter
     - role-monitoring-agents-promtail
     - role-monitoring-agents-cadvisor
+  when: >-
+    (monitoring_agents_node_exporter_enabled or monitoring_agents_promtail_enabled
+    or monitoring_agents_cadvisor_enabled) and monitoring_agents_acl_paths | length > 0
 
 # Install, configure, and start node-exporter.
 - name: "Run node-exporter tasks"

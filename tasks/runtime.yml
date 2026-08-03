@@ -1,0 +1,17 @@
+---
+- name: "Ensure monitoring agent group exists"
+  ansible.builtin.group:
+    name: "{{ monitoring_agents_group }}"
+    system: true
+    state: present
+
+- name: "Ensure monitoring agent user exists"
+  ansible.builtin.user:
+    name: "{{ monitoring_agents_user }}"
+    group: "{{ monitoring_agents_group }}"
+    system: true
+    shell: "{{ monitoring_agents_user_shell }}"
+    home: "/nonexistent"
+    create_home: false
+    password_lock: true
+    state: present

@@ -43,26 +43,28 @@
       monitoring_agents_promtail_enabled is true.
   when: monitoring_agents_promtail_enabled
 
-- name: "Validate promtail readable path configuration"
+- name: "Validate shared ACL path configuration"
   ansible.builtin.assert:
     that:
-      - monitoring_agents_promtail_readable_paths is sequence
-      - monitoring_agents_promtail_readable_path is mapping
-      - monitoring_agents_promtail_readable_path.path is defined
-      - monitoring_agents_promtail_readable_path.path is string
-      - monitoring_agents_promtail_readable_path.path | length > 0
-      - monitoring_agents_promtail_readable_path.recursive is defined
-      - monitoring_agents_promtail_readable_path.recursive is boolean
-      - monitoring_agents_promtail_readable_path.default_acl is defined
-      - monitoring_agents_promtail_readable_path.default_acl is boolean
+      - monitoring_agents_acl_paths is sequence
+      - monitoring_agents_acl_path is mapping
+      - monitoring_agents_acl_path.path is defined
+      - monitoring_agents_acl_path.path is string
+      - monitoring_agents_acl_path.path | length > 0
+      - monitoring_agents_acl_path.permissions is defined
+      - monitoring_agents_acl_path.permissions is string
+      - monitoring_agents_acl_path.permissions is match('^[rwxX]+$')
+      - monitoring_agents_acl_path.recursive is defined
+      - monitoring_agents_acl_path.recursive is boolean
+      - monitoring_agents_acl_path.default_acl is defined
+      - monitoring_agents_acl_path.default_acl is boolean
     fail_msg: >-
-      Each monitoring_agents_promtail_readable_paths entry must define a non-empty
-      path plus boolean recursive and default_acl values.
-  loop: "{{ monitoring_agents_promtail_readable_paths }}"
+      Each monitoring_agents_acl_paths entry must define a non-empty path, a permissions
+      value containing only r, w, x, or X, plus boolean recursive and default_acl values.
+  loop: "{{ monitoring_agents_acl_paths }}"
   loop_control:
-    loop_var: monitoring_agents_promtail_readable_path
-    label: "{{ monitoring_agents_promtail_readable_path.path | default('<missing path>') }}"
-  when: monitoring_agents_promtail_enabled
+    loop_var: monitoring_agents_acl_path
+    label: "{{ monitoring_agents_acl_path.path | default('<missing path>') }}"
 
 - name: "Validate promtail default labels"
   ansible.builtin.assert:
@@ -115,23 +117,6 @@
     loop_var: monitoring_agents_promtail_log_path
     label: "{{ monitoring_agents_promtail_log_path.path | default('<missing path>') }}"
   when: monitoring_agents_promtail_enabled
-
-- name: "Validate cAdvisor socket ACL path configuration"
-  ansible.builtin.assert:
-    that:
-      - monitoring_agents_cadvisor_socket_acl_paths is sequence
-      - monitoring_agents_cadvisor_socket_acl_path is mapping
-      - monitoring_agents_cadvisor_socket_acl_path.path is defined
-      - monitoring_agents_cadvisor_socket_acl_path.path is string
-      - monitoring_agents_cadvisor_socket_acl_path.path | length > 0
-    fail_msg: >-
-      Each monitoring_agents_cadvisor_socket_acl_paths entry must define a non-empty
-      socket path.
-  loop: "{{ monitoring_agents_cadvisor_socket_acl_paths }}"
-  loop_control:
-    loop_var: monitoring_agents_cadvisor_socket_acl_path
-    label: "{{ monitoring_agents_cadvisor_socket_acl_path.path | default('<missing path>') }}"
-  when: monitoring_agents_cadvisor_enabled
 
 - name: "Validate supported CPU architecture"
   ansible.builtin.assert:

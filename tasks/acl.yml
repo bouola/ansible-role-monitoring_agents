@@ -1,9 +1,188 @@
 ---
-- name: "Install ACL utilities when agent ACLs are configured"
+- name: "Install ACL utilities when ACL paths are configured"
   ansible.builtin.apt:
     name: "acl"
     state: present
     update_cache: true
-  when: >-
-    (monitoring_agents_promtail_enabled and monitoring_agents_promtail_readable_paths | length > 0)
-    or (monitoring_agents_cadvisor_enabled and monitoring_agents_cadvisor_socket_acl_paths | length > 0)
+  when: monitoring_agents_acl_paths | length > 0
+
+- name: "Collect configured ACL path state"
+  ansible.builtin.stat:
+    path: "{{ monitoring_agents_acl_path.path }}"
+  loop: "{{ monitoring_agents_acl_paths }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_path
+    label: "{{ monitoring_agents_acl_path.path }}"
+  register: monitoring_agents_acl_path_states
+  when: monitoring_agents_acl_paths | length > 0
+
+- name: "Fail when configured ACL path is absent"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_acl_path_state.stat.exists
+    fail_msg: >-
+      Configured ACL path {{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}
+      does not exist. Create it before granting access.
+  loop: "{{ monitoring_agents_acl_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_path_state
+    label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+  when: monitoring_agents_acl_paths | length > 0
+  notify:
+    - "Restart node-exporter"
+    - "Restart promtail"
+    - "Restart cadvisor"
+
+- name: "Fail when recursive ACL is requested for a non-directory"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_acl_path_state.stat.isdir
+    fail_msg: >-
+      Configured ACL path {{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}
+      must be a directory when recursive is true.
+  loop: "{{ monitoring_agents_acl_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_path_state
+    label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+  when:
+    - monitoring_agents_acl_paths | length > 0
+    - monitoring_agents_acl_path_state.monitoring_agents_acl_path.recursive
+
+- name: "Fail when default ACL is requested for a non-directory"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_acl_path_state.stat.isdir
+    fail_msg: >-
+      Configured ACL path {{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}
+      must be a directory when default_acl is true.
+  loop: "{{ monitoring_agents_acl_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_path_state
+    label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+  when:
+    - monitoring_agents_acl_paths | length > 0
+    - monitoring_agents_acl_path_state.monitoring_agents_acl_path.default_acl
+
+- name: "Grant monitoring group access to configured paths"
+  ansible.posix.acl:
+    path: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+    entity: "{{ monitoring_agents_group }}"
+    etype: "group"
+    permissions: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions }}"
+    state: "present"
+  loop: "{{ monitoring_agents_acl_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_path_state
+    label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+  when: monitoring_agents_acl_paths | length > 0
+
+- name: "Grant recursive monitoring group access without conditional execute permissions"
+  ansible.posix.acl:
+    path: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+    entity: "{{ monitoring_agents_group }}"
+    etype: "group"
+    permissions: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions }}"
+    recursive: true
+    state: "present"
+  loop: "{{ monitoring_agents_acl_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_path_state
+    label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+  when:
+    - monitoring_agents_acl_paths | length > 0
+    - monitoring_agents_acl_path_state.monitoring_agents_acl_path.recursive
+    - "'X' not in monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions"
+  notify:
+    - "Restart node-exporter"
+    - "Restart promtail"
+    - "Restart cadvisor"
+
+- name: "Collect recursive directories requiring conditional execute permissions"
+  ansible.builtin.find:
+    paths: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+    file_type: "directory"
+    recurse: true
+  loop: "{{ monitoring_agents_acl_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_path_state
+    label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+  register: monitoring_agents_acl_directory_states
+  when:
+    - monitoring_agents_acl_path_state.monitoring_agents_acl_path.recursive
+    - "'X' in monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions"
+
+- name: "Grant recursive directory access with execute permissions"
+  ansible.posix.acl:
+    path: "{{ monitoring_agents_acl_directory.1.path }}"
+    entity: "{{ monitoring_agents_group }}"
+    etype: "group"
+    permissions: >-
+      {{ monitoring_agents_acl_directory.0.monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions
+      | replace('X', 'x') }}
+    state: "present"
+  loop: >-
+    {{ monitoring_agents_acl_directory_states.results
+    | selectattr('files', 'defined') | list | subelements('files') }}
+  loop_control:
+    loop_var: monitoring_agents_acl_directory
+    label: "{{ monitoring_agents_acl_directory.1.path }}"
+  when: monitoring_agents_acl_paths | length > 0
+  notify:
+    - "Restart node-exporter"
+    - "Restart promtail"
+    - "Restart cadvisor"
+
+- name: "Collect recursive files requiring conditional execute permissions"
+  ansible.builtin.find:
+    paths: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+    file_type: "file"
+    recurse: true
+  loop: "{{ monitoring_agents_acl_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_path_state
+    label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+  register: monitoring_agents_acl_file_states
+  when:
+    - monitoring_agents_acl_path_state.monitoring_agents_acl_path.recursive
+    - "'X' in monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions"
+
+- name: "Grant recursive file access without execute permissions"
+  ansible.posix.acl:
+    path: "{{ monitoring_agents_acl_file.1.path }}"
+    entity: "{{ monitoring_agents_group }}"
+    etype: "group"
+    permissions: >-
+      {{ monitoring_agents_acl_file.0.monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions
+      | replace('X', '') }}
+    state: "present"
+  loop: >-
+    {{ monitoring_agents_acl_file_states.results
+    | selectattr('files', 'defined') | list | subelements('files') }}
+  loop_control:
+    loop_var: monitoring_agents_acl_file
+    label: "{{ monitoring_agents_acl_file.1.path }}"
+  when: monitoring_agents_acl_paths | length > 0
+  notify:
+    - "Restart node-exporter"
+    - "Restart promtail"
+    - "Restart cadvisor"
+
+- name: "Grant monitoring group default access to configured directories"
+  ansible.posix.acl:
+    path: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+    entity: "{{ monitoring_agents_group }}"
+    etype: "group"
+    permissions: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions }}"
+    default: true
+    state: "present"
+  loop: "{{ monitoring_agents_acl_path_states.results }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_path_state
+    label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
+  when:
+    - monitoring_agents_acl_paths | length > 0
+    - monitoring_agents_acl_path_state.monitoring_agents_acl_path.default_acl
+  notify:
+    - "Restart node-exporter"
+    - "Restart promtail"
+    - "Restart cadvisor"

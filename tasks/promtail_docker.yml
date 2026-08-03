@@ -1,0 +1,25 @@
+---
+- name: "Collect Docker group state for promtail"
+  ansible.builtin.getent:
+    database: "group"
+    key: "docker"
+  register: monitoring_agents_docker_group
+  failed_when: false
+  when: monitoring_agents_promtail_docker_enabled
+
+- name: "Fail when Docker group is absent for promtail"
+  ansible.builtin.assert:
+    that:
+      - not monitoring_agents_docker_group.failed
+      - ansible_facts.getent_group.docker is defined
+    fail_msg: >-
+      monitoring_agents_promtail_docker_enabled requires the docker group to exist.
+      Install and configure Docker before enabling Promtail Docker log access.
+  when: monitoring_agents_promtail_docker_enabled
+
+- name: "Add monitoring agent user to Docker group for promtail"
+  ansible.builtin.user:
+    name: "{{ monitoring_agents_user }}"
+    groups: "docker"
+    append: true
+  when: monitoring_agents_promtail_docker_enabled

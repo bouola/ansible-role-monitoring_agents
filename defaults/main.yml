@@ -20,6 +20,10 @@ monitoring_agents_group: "monitoring-agent"
 # Login shell assigned to the monitoring agent system user.
 monitoring_agents_user_shell: "/usr/sbin/nologin"
 
+# Existing paths granted ACLs to the shared monitoring group.
+# Each entry requires path, permissions, recursive, and default_acl values.
+monitoring_agents_acl_paths: []
+
 # Whether node-exporter is installed and managed.
 monitoring_agents_node_exporter_enabled: true
 
@@ -37,9 +41,6 @@ monitoring_agents_promtail_enabled: false
 
 # Whether promtail may read Docker container logs through Docker group membership.
 monitoring_agents_promtail_docker_enabled: false
-
-# Paths where promtail receives targeted read ACLs.
-monitoring_agents_promtail_readable_paths: []
 
 # Version of promtail to install.
 monitoring_agents_promtail_version: "3.6.11"
@@ -73,10 +74,6 @@ monitoring_agents_cadvisor_port: 8080
 
 # Additional CLI flags passed to cAdvisor.
 monitoring_agents_cadvisor_extra_args: []
-
-# Existing Unix sockets granted read/write ACLs for cAdvisor container discovery.
-# Each entry requires a non-empty path, for example /var/run/docker.sock.
-monitoring_agents_cadvisor_socket_acl_paths: []
 
 # SHA256 checksums for cAdvisor release binaries by version and architecture.
 monitoring_agents_cadvisor_checksums:
