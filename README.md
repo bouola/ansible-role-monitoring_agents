@@ -31,6 +31,7 @@ Galaxy FQCN: `bouola.monitoring_agents`
 | `monitoring_agents_node_exporter_extra_args` | list | `[]` | Additional CLI flags passed to node-exporter. |
 | `monitoring_agents_promtail_enabled` | boolean | `false` | Whether promtail is installed and managed. |
 | `monitoring_agents_promtail_docker_enabled` | boolean | `false` | Whether promtail's runtime user is added to the `docker` group. This grants Docker-equivalent root access. |
+| `monitoring_agents_promtail_systemd_journal_access_enabled` | boolean | `false` | Whether promtail's runtime user is added to the `systemd-journal` group for explicitly configured journal scrape jobs. |
 | `monitoring_agents_promtail_version` | string | `3.6.11` | Version of promtail to install. |
 | `monitoring_agents_promtail_port` | integer | `9080` | TCP port where promtail exposes its HTTP endpoint. |
 | `monitoring_agents_promtail_loki_url` | string | empty | Loki base URL used by promtail, for example `http://loki:3100`. Required when promtail is enabled. |
@@ -49,6 +50,10 @@ binary assets.
 
 When `monitoring_agents_promtail_docker_enabled` is `true`, Docker must already
 be installed and its `docker` group must exist. The role does not create it.
+
+When `monitoring_agents_promtail_systemd_journal_access_enabled` is `true`, the
+host must provide the `systemd-journal` group. This grants access only; configure
+the journal scrape itself with `monitoring_agents_promtail_extra_scrape_configs`.
 
 Use `monitoring_agents_acl_paths` to grant the shared monitoring group access
 without changing existing ownership or group permissions. Configuring one or
@@ -106,6 +111,7 @@ Full deployment with all agents enabled:
     monitoring_agents_promtail_loki_url: "http://loki:3100"
     monitoring_agents_promtail_bearer_token_file: "/etc/monitoring-agents/loki.token"
     monitoring_agents_promtail_docker_enabled: true
+    monitoring_agents_promtail_systemd_journal_access_enabled: true
     monitoring_agents_promtail_default_labels:
       environment: "production"
       team: "platform"
