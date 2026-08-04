@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/bouola/ansible-role-monitoring_agents/compare/v1.0.0...v1.1.0) (2026-08-04)
+
+
+### Features
+
+* enable systemd journal access for Promtail ([25166cf](https://github.com/bouola/ansible-role-monitoring_agents/commit/25166cf6d94531cce43e333c7d818a39c7203f52))
+
 # 1.0.0 (2026-08-04)
 
 
