@@ -28,10 +28,6 @@
     loop_var: monitoring_agents_acl_path_state
     label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
   when: monitoring_agents_acl_paths | length > 0
-  notify:
-    - "Restart node-exporter"
-    - "Restart promtail"
-    - "Restart cadvisor"
 
 - name: "Fail when recursive ACL is requested for a non-directory"
   ansible.builtin.assert:
@@ -75,8 +71,12 @@
     loop_var: monitoring_agents_acl_path_state
     label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
   when: monitoring_agents_acl_paths | length > 0
+  notify:
+    - "Restart node-exporter"
+    - "Restart promtail"
+    - "Restart cadvisor"
 
-- name: "Grant recursive monitoring group access without conditional execute permissions"
+- name: "Grant recursive monitoring group access"
   ansible.posix.acl:
     path: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
     entity: "{{ monitoring_agents_group }}"
@@ -91,77 +91,6 @@
   when:
     - monitoring_agents_acl_paths | length > 0
     - monitoring_agents_acl_path_state.monitoring_agents_acl_path.recursive
-    - "'X' not in monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions"
-  notify:
-    - "Restart node-exporter"
-    - "Restart promtail"
-    - "Restart cadvisor"
-
-- name: "Collect recursive directories requiring conditional execute permissions"
-  ansible.builtin.find:
-    paths: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
-    file_type: "directory"
-    recurse: true
-  loop: "{{ monitoring_agents_acl_path_states.results }}"
-  loop_control:
-    loop_var: monitoring_agents_acl_path_state
-    label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
-  register: monitoring_agents_acl_directory_states
-  when:
-    - monitoring_agents_acl_path_state.monitoring_agents_acl_path.recursive
-    - "'X' in monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions"
-
-- name: "Grant recursive directory access with execute permissions"
-  ansible.posix.acl:
-    path: "{{ monitoring_agents_acl_directory.1.path }}"
-    entity: "{{ monitoring_agents_group }}"
-    etype: "group"
-    permissions: >-
-      {{ monitoring_agents_acl_directory.0.monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions
-      | replace('X', 'x') }}
-    state: "present"
-  loop: >-
-    {{ monitoring_agents_acl_directory_states.results
-    | selectattr('files', 'defined') | list | subelements('files') }}
-  loop_control:
-    loop_var: monitoring_agents_acl_directory
-    label: "{{ monitoring_agents_acl_directory.1.path }}"
-  when: monitoring_agents_acl_paths | length > 0
-  notify:
-    - "Restart node-exporter"
-    - "Restart promtail"
-    - "Restart cadvisor"
-
-- name: "Collect recursive files requiring conditional execute permissions"
-  ansible.builtin.find:
-    paths: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
-    file_type: "file"
-    recurse: true
-  loop: "{{ monitoring_agents_acl_path_states.results }}"
-  loop_control:
-    loop_var: monitoring_agents_acl_path_state
-    label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
-  register: monitoring_agents_acl_file_states
-  when:
-    - monitoring_agents_acl_path_state.monitoring_agents_acl_path.recursive
-    - "'X' in monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions"
-
-- name: "Grant recursive file access without execute permissions"
-  ansible.posix.acl:
-    path: "{{ monitoring_agents_acl_file.1.path }}"
-    entity: "{{ monitoring_agents_group }}"
-    etype: "group"
-    permissions: >-
-      {{ monitoring_agents_acl_file.0.monitoring_agents_acl_path_state.monitoring_agents_acl_path.permissions
-      | replace('X', '') }}
-    state: "present"
-  loop: >-
-    {{ monitoring_agents_acl_file_states.results
-    | selectattr('files', 'defined') | list | subelements('files') }}
-  loop_control:
-    loop_var: monitoring_agents_acl_file
-    label: "{{ monitoring_agents_acl_file.1.path }}"
-  when: monitoring_agents_acl_paths | length > 0
   notify:
     - "Restart node-exporter"
     - "Restart promtail"
