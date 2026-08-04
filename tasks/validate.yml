@@ -43,6 +43,14 @@
       monitoring_agents_promtail_enabled is true.
   when: monitoring_agents_promtail_enabled
 
+- name: "Validate promtail systemd journal access option"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_systemd_journal_access_enabled is boolean
+    fail_msg: >-
+      monitoring_agents_promtail_systemd_journal_access_enabled must be a boolean.
+  when: monitoring_agents_promtail_enabled
+
 - name: "Validate shared ACL path configuration"
   ansible.builtin.assert:
     that:
