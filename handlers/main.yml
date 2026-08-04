@@ -1,0 +1,24 @@
+---
+- name: "Restart node-exporter"
+  ansible.builtin.systemd:
+    name: "node-exporter"
+    daemon_reload: true
+    enabled: true
+    state: restarted
+  when: monitoring_agents_node_exporter_enabled
+
+- name: "Restart promtail"
+  ansible.builtin.systemd:
+    name: "promtail"
+    daemon_reload: true
+    enabled: true
+    state: restarted
+  when: monitoring_agents_promtail_enabled
+
+- name: "Restart cadvisor"
+  ansible.builtin.systemd:
+    name: "cadvisor"
+    daemon_reload: true
+    enabled: true
+    state: restarted
+  when: monitoring_agents_cadvisor_enabled

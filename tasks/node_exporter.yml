@@ -1,0 +1,26 @@
+---
+- name: "Load node-exporter agent variables"
+  ansible.builtin.include_vars:
+    file: "node_exporter.yml"
+
+- name: "Report disabled node-exporter"
+  ansible.builtin.debug:
+    msg: >-
+      node-exporter is disabled by monitoring_agents_node_exporter_enabled.
+      Installation, configuration, and service management are skipped.
+  when: not monitoring_agents_node_exporter_enabled
+
+# Install node-exporter binary from the official release archive.
+- name: "Include node-exporter install tasks"
+  ansible.builtin.include_tasks: install.yml
+  when: monitoring_agents_node_exporter_enabled
+
+# Prepare shared directories and report node-exporter config state.
+- name: "Include node-exporter configure tasks"
+  ansible.builtin.include_tasks: configure.yml
+  when: monitoring_agents_node_exporter_enabled
+
+# Deploy, reload, enable, and start the node-exporter systemd service.
+- name: "Include node-exporter systemd tasks"
+  ansible.builtin.include_tasks: systemd.yml
+  when: monitoring_agents_node_exporter_enabled

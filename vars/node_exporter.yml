@@ -1,0 +1,37 @@
+---
+# Internal metadata used by shared install, configure, and systemd tasks.
+monitoring_agents_agent_name: "node-exporter"
+
+# node-exporter binary name installed on the target host.
+monitoring_agents_agent_binary: "node_exporter"
+
+# node-exporter systemd service name.
+monitoring_agents_agent_service_name: "node-exporter"
+
+# node-exporter version selected by the public role variable.
+monitoring_agents_agent_version: "{{ monitoring_agents_node_exporter_version }}"
+
+# node-exporter GitHub release archive name for the target architecture.
+monitoring_agents_agent_asset_name_template: >-
+  node_exporter-{{ monitoring_agents_node_exporter_version }}.linux-{{ monitoring_agents_agent_arch }}.tar.gz
+
+# node-exporter binary path inside the release archive.
+monitoring_agents_agent_archive_member_template: >-
+  node_exporter-{{ monitoring_agents_node_exporter_version }}.linux-{{ monitoring_agents_agent_arch }}/node_exporter
+
+# node-exporter release archive download URL.
+monitoring_agents_agent_download_url_template: >-
+  {{ monitoring_agents_prometheus_release_base_url }}/node_exporter/releases/download/v{{ monitoring_agents_node_exporter_version }}/node_exporter-{{ monitoring_agents_node_exporter_version }}.linux-{{ monitoring_agents_agent_arch }}.tar.gz
+
+# node-exporter SHA256 checksum file URL.
+monitoring_agents_agent_checksum_template: >-
+  sha256:{{ monitoring_agents_prometheus_release_base_url }}/node_exporter/releases/download/v{{ monitoring_agents_node_exporter_version }}/sha256sums.txt
+
+# Empty because node-exporter has no separate configuration file.
+monitoring_agents_agent_config_template: ""
+
+# Empty because node-exporter has no separate configuration file.
+monitoring_agents_agent_config_dest: ""
+
+# node-exporter systemd service template.
+monitoring_agents_agent_service_template: "node_exporter.service.j2"

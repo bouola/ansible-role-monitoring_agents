@@ -1,0 +1,28 @@
+---
+- name: "Load cAdvisor agent variables"
+  ansible.builtin.include_vars:
+    file: "cadvisor.yml"
+
+- name: "Validate cAdvisor checksum availability"
+  ansible.builtin.assert:
+    that:
+      - (monitoring_agents_cadvisor_checksums[monitoring_agents_cadvisor_version]
+        | default({}))[monitoring_agents_agent_arch] is defined
+      - (monitoring_agents_cadvisor_checksums[monitoring_agents_cadvisor_version]
+        | default({}))[monitoring_agents_agent_arch] | length > 0
+    fail_msg: >-
+      No cAdvisor SHA256 checksum is configured for version
+      {{ monitoring_agents_cadvisor_version }} and architecture {{ monitoring_agents_agent_arch }}.
+      Add it to monitoring_agents_cadvisor_checksums before enabling cAdvisor.
+
+# Install cAdvisor binary from the official release asset.
+- name: "Include cAdvisor install tasks"
+  ansible.builtin.include_tasks: install.yml
+
+# Deploy cAdvisor environment file.
+- name: "Include cAdvisor configure tasks"
+  ansible.builtin.include_tasks: configure.yml
+
+# Deploy, reload, enable, and start the cAdvisor systemd service.
+- name: "Include cAdvisor systemd tasks"
+  ansible.builtin.include_tasks: systemd.yml

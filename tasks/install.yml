@@ -1,0 +1,127 @@
+---
+- name: "Validate requested agent version"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_agent_version is defined
+      - monitoring_agents_agent_version | string | length > 0
+    fail_msg: >-
+      The version for {{ monitoring_agents_agent_name }} must be defined and non-empty.
+
+- name: "Set monitoring agent release metadata"
+  ansible.builtin.set_fact:
+    monitoring_agents_agent_asset_name: "{{ monitoring_agents_agent_asset_name_template }}"
+    monitoring_agents_agent_download_url: "{{ monitoring_agents_agent_download_url_template }}"
+    monitoring_agents_agent_checksum: "{{ monitoring_agents_agent_checksum_template | default(omit) }}"
+    monitoring_agents_agent_archive_member: "{{ monitoring_agents_agent_archive_member_template | default('') }}"
+
+- name: "Collect binary install directory state"
+  ansible.builtin.stat:
+    path: "{{ monitoring_agents_binary_install_dir }}"
+  register: monitoring_agents_binary_install_dir_state
+
+- name: "Fail when binary install path is not a directory"
+  ansible.builtin.fail:
+    msg: >-
+      Binary install path {{ monitoring_agents_binary_install_dir }} exists but is not a directory.
+      Update monitoring_agents_binary_install_dir or remove the conflicting path.
+  when:
+    - monitoring_agents_binary_install_dir_state.stat.exists
+    - not monitoring_agents_binary_install_dir_state.stat.isdir
+
+- name: "Create binary install directory"
+  ansible.builtin.file:
+    path: "{{ monitoring_agents_binary_install_dir }}"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode: "0755"
+
+- name: "Collect installed binary state"
+  ansible.builtin.stat:
+    path: "{{ monitoring_agents_binary_install_dir }}/{{ monitoring_agents_agent_binary }}"
+  register: monitoring_agents_installed_binary
+
+- name: "Read installed binary version"
+  ansible.builtin.command:
+    cmd: "{{ monitoring_agents_binary_install_dir }}/{{ monitoring_agents_agent_binary }} --version"
+  changed_when: false
+  failed_when: false
+  register: monitoring_agents_current_version
+  when: monitoring_agents_installed_binary.stat.exists
+
+- name: "Report matching installed binary"
+  ansible.builtin.debug:
+    msg: >-
+      {{ monitoring_agents_agent_name }} {{ monitoring_agents_agent_version }} is already
+      installed at {{ monitoring_agents_binary_install_dir }}/{{ monitoring_agents_agent_binary }}.
+      Download and install are skipped.
+  when:
+    - monitoring_agents_installed_binary.stat.exists
+    - monitoring_agents_agent_version in monitoring_agents_current_version.stdout
+
+- name: "Create temporary install directory"
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: "-{{ monitoring_agents_agent_name }}"
+  register: monitoring_agents_install_temp_dir
+  when: >-
+    not monitoring_agents_installed_binary.stat.exists or
+    monitoring_agents_agent_version not in monitoring_agents_current_version.stdout
+
+- name: "Download archive release asset"
+  ansible.builtin.get_url:
+    url: "{{ monitoring_agents_agent_download_url }}"
+    dest: "{{ monitoring_agents_install_temp_dir.path }}/{{ monitoring_agents_agent_asset_name }}"
+    mode: "0644"
+    checksum: "{{ monitoring_agents_agent_checksum }}"
+  when:
+    - monitoring_agents_install_temp_dir.path is defined
+    - monitoring_agents_agent_archive_member | length > 0
+
+- name: "Install archive extraction package"
+  ansible.builtin.apt:
+    name: "unzip"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - monitoring_agents_install_temp_dir.path is defined
+    - monitoring_agents_agent_asset_name is search('\\.zip$')
+
+- name: "Extract archive release asset"
+  ansible.builtin.unarchive:
+    src: "{{ monitoring_agents_install_temp_dir.path }}/{{ monitoring_agents_agent_asset_name }}"
+    dest: "{{ monitoring_agents_install_temp_dir.path }}"
+    remote_src: true
+  when:
+    - monitoring_agents_install_temp_dir.path is defined
+    - monitoring_agents_agent_archive_member | length > 0
+
+- name: "Download binary release asset"
+  ansible.builtin.get_url:
+    url: "{{ monitoring_agents_agent_download_url }}"
+    dest: "{{ monitoring_agents_install_temp_dir.path }}/{{ monitoring_agents_agent_binary }}"
+    mode: "0755"
+    checksum: "{{ monitoring_agents_agent_checksum }}"
+  when:
+    - monitoring_agents_install_temp_dir.path is defined
+    - monitoring_agents_agent_archive_member | length == 0
+
+- name: "Install monitoring agent binary"
+  ansible.builtin.copy:
+    src: >-
+      {{ monitoring_agents_install_temp_dir.path }}/{{ monitoring_agents_agent_archive_member
+      | default(monitoring_agents_agent_binary, true) }}
+    dest: "{{ monitoring_agents_binary_install_dir }}/{{ monitoring_agents_agent_binary }}"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+    remote_src: true
+  notify: "Restart {{ monitoring_agents_agent_name }}"
+  when: monitoring_agents_install_temp_dir.path is defined
+
+- name: "Remove temporary install directory"
+  ansible.builtin.file:
+    path: "{{ monitoring_agents_install_temp_dir.path }}"
+    state: absent
+  when: monitoring_agents_install_temp_dir.path is defined

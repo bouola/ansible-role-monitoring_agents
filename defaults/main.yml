@@ -1,0 +1,82 @@
+---
+# Directory where monitoring agent binaries are installed.
+monitoring_agents_binary_install_dir: "/usr/local/bin"
+
+# Directory where monitoring agent configuration files are installed.
+monitoring_agents_config_dir: "/etc/monitoring-agents"
+
+# Directory where monitoring agent runtime state files are stored.
+monitoring_agents_state_dir: "/var/lib/monitoring-agent"
+
+# Directory where systemd unit files are installed.
+monitoring_agents_systemd_dir: "/etc/systemd/system"
+
+# System user used to run all monitoring agents.
+monitoring_agents_user: "monitoring-agent"
+
+# System group used to run all monitoring agents.
+monitoring_agents_group: "monitoring-agent"
+
+# Login shell assigned to the monitoring agent system user.
+monitoring_agents_user_shell: "/usr/sbin/nologin"
+
+# Existing paths granted ACLs to the shared monitoring group.
+# Each entry requires path, permissions, recursive, and default_acl values.
+monitoring_agents_acl_paths: []
+
+# Whether node-exporter is installed and managed.
+monitoring_agents_node_exporter_enabled: true
+
+# Version of node-exporter to install.
+monitoring_agents_node_exporter_version: "1.12.1"
+
+# TCP port where node-exporter listens.
+monitoring_agents_node_exporter_port: 9100
+
+# Additional CLI flags passed to node-exporter.
+monitoring_agents_node_exporter_extra_args: []
+
+# Whether promtail is installed and managed.
+monitoring_agents_promtail_enabled: false
+
+# Whether promtail may read Docker container logs through Docker group membership.
+monitoring_agents_promtail_docker_enabled: false
+
+# Version of promtail to install.
+monitoring_agents_promtail_version: "3.6.11"
+
+# TCP port where promtail exposes its HTTP endpoint.
+monitoring_agents_promtail_port: 9080
+
+# Loki push URL used by promtail, for example http://loki:3100.
+monitoring_agents_promtail_loki_url: ""
+
+# Bearer token file used by promtail when pushing to Loki.
+monitoring_agents_promtail_bearer_token_file: ""
+
+# Labels added to every Promtail file scrape configuration.
+monitoring_agents_promtail_default_labels: {}
+
+# File scrape configurations with path and optional labels.
+monitoring_agents_promtail_log_paths: []
+
+# Additional promtail scrape_configs entries.
+monitoring_agents_promtail_extra_scrape_configs: []
+
+# Whether cAdvisor is installed and managed.
+monitoring_agents_cadvisor_enabled: false
+
+# Version of cAdvisor to install.
+monitoring_agents_cadvisor_version: "0.60.5"
+
+# TCP port where cAdvisor listens.
+monitoring_agents_cadvisor_port: 8080
+
+# Additional CLI flags passed to cAdvisor.
+monitoring_agents_cadvisor_extra_args: []
+
+# SHA256 checksums for cAdvisor release binaries by version and architecture.
+monitoring_agents_cadvisor_checksums:
+  "0.60.5":
+    amd64: "6f258bed28113218c88729634c47ead8d928b81b1504b75fd911b98d29003a87"
+    arm64: "6f93087c114bc64a7b8d5c4148190b4d9b95511b9bf023246ce4c76dc448a48a"

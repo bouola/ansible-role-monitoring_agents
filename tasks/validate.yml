@@ -1,0 +1,132 @@
+---
+- name: "Validate supported operating system"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts["os_family"] == "Debian"
+    fail_msg: >-
+      This role supports Debian-family operating systems only.
+      Current os_family is {{ ansible_facts["os_family"] | default('<undefined>') }}.
+
+- name: "Build enabled monitoring agents list"
+  ansible.builtin.set_fact:
+    monitoring_agents_enabled_agents:
+      - name: "node-exporter"
+        version: "{{ monitoring_agents_node_exporter_version }}"
+        enabled: "{{ monitoring_agents_node_exporter_enabled }}"
+      - name: "promtail"
+        version: "{{ monitoring_agents_promtail_version }}"
+        enabled: "{{ monitoring_agents_promtail_enabled }}"
+      - name: "cadvisor"
+        version: "{{ monitoring_agents_cadvisor_version }}"
+        enabled: "{{ monitoring_agents_cadvisor_enabled }}"
+
+- name: "Validate enabled monitoring agent versions"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_agent.version is defined
+      - monitoring_agents_agent.version | string | length > 0
+    fail_msg: >-
+      The version for enabled agent {{ monitoring_agents_agent.name }} must be defined
+      and non-empty.
+  loop: "{{ monitoring_agents_enabled_agents | selectattr('enabled') }}"
+  loop_control:
+    loop_var: monitoring_agents_agent
+    label: "{{ monitoring_agents_agent.name }}"
+
+- name: "Validate promtail Loki URL when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_loki_url is string
+      - monitoring_agents_promtail_loki_url | length > 0
+    fail_msg: >-
+      monitoring_agents_promtail_loki_url must be a non-empty Loki URL when
+      monitoring_agents_promtail_enabled is true.
+  when: monitoring_agents_promtail_enabled
+
+- name: "Validate shared ACL path configuration"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_acl_paths is sequence
+      - monitoring_agents_acl_path is mapping
+      - monitoring_agents_acl_path.path is defined
+      - monitoring_agents_acl_path.path is string
+      - monitoring_agents_acl_path.path | length > 0
+      - monitoring_agents_acl_path.permissions is defined
+      - monitoring_agents_acl_path.permissions is string
+      - monitoring_agents_acl_path.permissions is match('^[rwxX]+$')
+      - monitoring_agents_acl_path.recursive is defined
+      - monitoring_agents_acl_path.recursive is boolean
+      - monitoring_agents_acl_path.default_acl is defined
+      - monitoring_agents_acl_path.default_acl is boolean
+    fail_msg: >-
+      Each monitoring_agents_acl_paths entry must define a non-empty path, a permissions
+      value containing only r, w, x, or X, plus boolean recursive and default_acl values.
+  loop: "{{ monitoring_agents_acl_paths }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_path
+    label: "{{ monitoring_agents_acl_path.path | default('<missing path>') }}"
+
+- name: "Validate promtail default labels"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_default_labels is mapping
+    fail_msg: >-
+      monitoring_agents_promtail_default_labels must be a dictionary of label names
+      and string values.
+  when: monitoring_agents_promtail_enabled
+
+- name: "Validate promtail default label entries"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_label.key is match('^[A-Za-z_][A-Za-z0-9_]*$')
+      - monitoring_agents_promtail_label.value is string
+      - monitoring_agents_promtail_label.key not in ["job", "host", "__path__"]
+    fail_msg: >-
+      Promtail labels must use valid label names and string values. The job, host,
+      and __path__ labels are reserved by this role.
+  loop: "{{ monitoring_agents_promtail_default_labels | dict2items }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_label
+    label: "{{ monitoring_agents_promtail_label.key }}"
+  when: monitoring_agents_promtail_enabled
+
+- name: "Validate promtail log path configuration"
+  ansible.builtin.assert:
+    that:
+      - monitoring_agents_promtail_log_path is mapping
+      - monitoring_agents_promtail_log_path.path is defined
+      - monitoring_agents_promtail_log_path.path is string
+      - monitoring_agents_promtail_log_path.path | length > 0
+      - monitoring_agents_promtail_log_path.labels | default({}) is mapping
+      - >-
+        (monitoring_agents_promtail_log_path.labels | default({}) | dict2items
+        | selectattr('key', 'match', '^[A-Za-z_][A-Za-z0-9_]*$') | list | length)
+        == (monitoring_agents_promtail_log_path.labels | default({}) | length)
+      - >-
+        (monitoring_agents_promtail_log_path.labels | default({}) | dict2items
+        | selectattr('value', 'string') | list | length)
+        == (monitoring_agents_promtail_log_path.labels | default({}) | length)
+      - >-
+        (monitoring_agents_promtail_log_path.labels | default({})).keys() | list
+        | intersect(["job", "host", "__path__"]) | length == 0
+    fail_msg: >-
+      Each monitoring_agents_promtail_log_paths entry must define a non-empty path
+      and optional labels with valid names, string values, and no reserved labels.
+  loop: "{{ monitoring_agents_promtail_log_paths }}"
+  loop_control:
+    loop_var: monitoring_agents_promtail_log_path
+    label: "{{ monitoring_agents_promtail_log_path.path | default('<missing path>') }}"
+  when: monitoring_agents_promtail_enabled
+
+- name: "Validate supported CPU architecture"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts["architecture"] in ["x86_64", "aarch64"]
+    fail_msg: >-
+      Unsupported architecture {{ ansible_facts["architecture"] | default('<undefined>') }}.
+      Supported architectures are x86_64 and aarch64.
+
+- name: "Set monitoring agent architecture"
+  ansible.builtin.set_fact:
+    monitoring_agents_agent_arch: >-
+      {{ {'x86_64': 'amd64', 'aarch64': 'arm64'}[ansible_facts["architecture"]] }}

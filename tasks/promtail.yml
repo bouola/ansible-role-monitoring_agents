@@ -1,0 +1,20 @@
+---
+- name: "Load promtail agent variables"
+  ansible.builtin.include_vars:
+    file: "promtail.yml"
+
+# Install promtail binary from the official release archive.
+- name: "Include promtail install tasks"
+  ansible.builtin.include_tasks: install.yml
+
+# Deploy promtail configuration.
+- name: "Include promtail configure tasks"
+  ansible.builtin.include_tasks: configure.yml
+
+# Configure optional Docker group access for Promtail.
+- name: "Include promtail Docker access tasks"
+  ansible.builtin.include_tasks: promtail_docker.yml
+
+# Deploy, reload, enable, and start the promtail systemd service.
+- name: "Include promtail systemd tasks"
+  ansible.builtin.include_tasks: systemd.yml

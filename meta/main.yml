@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  role_name: "monitoring_agents"
+  namespace: "bouola"
+  description: "Deploy and manage monitoring agents (node-exporter, promtail, cadvisor) as systemd services"
+  author: "bouola"
+  license: "MIT"
+  min_ansible_version: "2.15"
+  galaxy_tags:
+    - "monitoring"
+    - "nodeexporter"
+    - "promtail"
+    - "cadvisor"
+    - "systemd"
+  platforms:
+    - name: "Debian"
+      versions:
+        - "bookworm"
+        - "trixie"
+    - name: "Ubuntu"
+      versions:
+        - "jammy"
+        - "noble"

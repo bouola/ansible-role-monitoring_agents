@@ -1,0 +1,58 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  vars_files:
+    - >-
+      {{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY')
+      | default(lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY')
+      | dirname | dirname, true) }}/defaults/main.yml
+  tasks:
+    - name: "Collect node-exporter binary state"
+      ansible.builtin.stat:
+        path: "{{ monitoring_agents_binary_install_dir }}/node_exporter"
+      register: monitoring_agents_node_exporter_binary
+
+    - name: "Assert node-exporter binary exists"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_node_exporter_binary.stat.exists
+          - monitoring_agents_node_exporter_binary.stat.executable
+        fail_msg: >-
+          node-exporter binary is missing or is not executable at
+          {{ monitoring_agents_binary_install_dir }}/node_exporter.
+
+    - name: "Collect node-exporter service state"
+      ansible.builtin.systemd:
+        name: "node-exporter"
+      register: monitoring_agents_node_exporter_service
+      failed_when: false
+
+    - name: "Assert node-exporter service is enabled and running"
+      ansible.builtin.assert:
+        that:
+          - not monitoring_agents_node_exporter_service.failed
+          - monitoring_agents_node_exporter_service.status.ActiveState == "active"
+          - monitoring_agents_node_exporter_service.status.UnitFileState == "enabled"
+        fail_msg: >-
+          node-exporter service is not enabled and active.
+
+    - name: "Read node-exporter binary version"
+      ansible.builtin.command:
+        cmd: "{{ monitoring_agents_binary_install_dir }}/node_exporter --version"
+      changed_when: false
+      register: monitoring_agents_node_exporter_version_check
+
+    - name: "Assert node-exporter binary version"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_node_exporter_version in monitoring_agents_node_exporter_version_check.stdout
+        fail_msg: >-
+          node-exporter binary version does not match
+          {{ monitoring_agents_node_exporter_version }}.
+
+    - name: "Wait for node-exporter port"
+      ansible.builtin.wait_for:
+        port: "{{ monitoring_agents_node_exporter_port }}"
+        host: "127.0.0.1"
+        timeout: 15
