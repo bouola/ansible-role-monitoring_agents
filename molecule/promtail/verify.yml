@@ -22,6 +22,18 @@
         fail_msg: >-
           Monitoring user {{ monitoring_agents_user }} is not a member of the Docker group.
 
+    - name: "Collect systemd journal group membership"
+      ansible.builtin.getent:
+        database: "group"
+        key: "systemd-journal"
+
+    - name: "Assert monitoring user belongs to systemd journal group"
+      ansible.builtin.assert:
+        that:
+          - monitoring_agents_user in ansible_facts.getent_group["systemd-journal"][2].split(',')
+        fail_msg: >-
+          Monitoring user {{ monitoring_agents_user }} is not a member of the systemd-journal group.
+
     - name: "Read restricted log as monitoring user"
       ansible.builtin.command:
         cmd: "cat /tmp/molecule-promtail-readable/application.log"

@@ -42,6 +42,9 @@ monitoring_agents_promtail_enabled: false
 # Whether promtail may read Docker container logs through Docker group membership.
 monitoring_agents_promtail_docker_enabled: false
 
+# Whether promtail may read the local systemd journal through group membership.
+monitoring_agents_promtail_systemd_journal_access_enabled: false
+
 # Version of promtail to install.
 monitoring_agents_promtail_version: "3.6.11"
 

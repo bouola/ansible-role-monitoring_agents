@@ -6,6 +6,7 @@
     monitoring_agents_node_exporter_enabled: false
     monitoring_agents_promtail_enabled: true
     monitoring_agents_promtail_docker_enabled: true
+    monitoring_agents_promtail_systemd_journal_access_enabled: true
     monitoring_agents_acl_paths:
       - path: "/tmp/molecule-promtail-readable"
         permissions: "rX"
@@ -39,6 +40,12 @@
     - name: "Ensure Docker group exists for fixture"
       ansible.builtin.group:
         name: "docker"
+        state: present
+
+    - name: "Ensure systemd journal group exists for fixture"
+      ansible.builtin.group:
+        name: "systemd-journal"
+        system: true
         state: present
 
     - name: "Ensure monitoring group for token fixture"

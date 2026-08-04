@@ -11,9 +11,9 @@
 - name: "Include promtail configure tasks"
   ansible.builtin.include_tasks: configure.yml
 
-# Configure optional Docker group access for Promtail.
-- name: "Include promtail Docker access tasks"
-  ansible.builtin.include_tasks: promtail_docker.yml
+# Configure optional Docker and systemd journal group access for Promtail.
+- name: "Include promtail access tasks"
+  ansible.builtin.include_tasks: promtail_access.yml
 
 # Deploy, reload, enable, and start the promtail systemd service.
 - name: "Include promtail systemd tasks"
