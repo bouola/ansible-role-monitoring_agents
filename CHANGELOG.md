@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/bouola/ansible-role-monitoring_agents/compare/v1.1.0...v1.1.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* remove redundant handlers and enhance ACL management ([a443d99](https://github.com/bouola/ansible-role-monitoring_agents/commit/a443d99eea8be3b069fabc99dbee4e16fd8801af))
+
 # [1.1.0](https://github.com/bouola/ansible-role-monitoring_agents/compare/v1.0.0...v1.1.0) (2026-08-04)
 
 
