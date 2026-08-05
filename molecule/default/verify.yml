@@ -8,6 +8,19 @@
       | default(lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY')
       | dirname | dirname, true) }}/defaults/main.yml
   tasks:
+    - name: "Collect shared ACL fixture"
+      ansible.posix.acl:
+        path: "/tmp/molecule-shared-acl"
+        state: "query"
+      register: monitoring_agents_shared_acl_fixture
+
+    - name: "Assert shared ACL fixture grants group access"
+      ansible.builtin.assert:
+        that:
+          - "'group:' ~ monitoring_agents_group ~ ':r-x' in monitoring_agents_shared_acl_fixture.acl"
+        fail_msg: >-
+          Shared ACL fixture does not grant {{ monitoring_agents_group }} read/traverse access.
+
     - name: "Collect node-exporter binary state"
       ansible.builtin.stat:
         path: "{{ monitoring_agents_binary_install_dir }}/node_exporter"
