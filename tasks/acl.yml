@@ -71,10 +71,6 @@
     loop_var: monitoring_agents_acl_path_state
     label: "{{ monitoring_agents_acl_path_state.monitoring_agents_acl_path.path }}"
   when: monitoring_agents_acl_paths | length > 0
-  notify:
-    - "Restart node-exporter"
-    - "Restart promtail"
-    - "Restart cadvisor"
 
 - name: "Grant recursive monitoring group access"
   ansible.posix.acl:
@@ -91,10 +87,6 @@
   when:
     - monitoring_agents_acl_paths | length > 0
     - monitoring_agents_acl_path_state.monitoring_agents_acl_path.recursive
-  notify:
-    - "Restart node-exporter"
-    - "Restart promtail"
-    - "Restart cadvisor"
 
 - name: "Grant monitoring group default access to configured directories"
   ansible.posix.acl:
@@ -111,7 +103,3 @@
   when:
     - monitoring_agents_acl_paths | length > 0
     - monitoring_agents_acl_path_state.monitoring_agents_acl_path.default_acl
-  notify:
-    - "Restart node-exporter"
-    - "Restart promtail"
-    - "Restart cadvisor"
