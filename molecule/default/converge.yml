@@ -16,6 +16,11 @@
     monitoring_agents_cadvisor_enabled: true
 
   pre_tasks:
+    - name: "Collect shared ACL fixture directory state"
+      ansible.builtin.stat:
+        path: "/tmp/molecule-shared-acl"
+      register: monitoring_agents_shared_acl_fixture
+
     - name: "Create shared ACL fixture directory"
       ansible.builtin.file:
         path: "/tmp/molecule-shared-acl"
@@ -23,6 +28,7 @@
         owner: "root"
         group: "root"
         mode: "0700"
+      when: not monitoring_agents_shared_acl_fixture.stat.exists
 
     - name: "Create default promtail log file"
       ansible.builtin.copy:
