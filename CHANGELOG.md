@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/bouola/ansible-role-monitoring_agents/compare/v1.1.1...v1.2.0) (2026-09-30)
+
+
+### Features
+
+* add configurable listen address for node-exporter ([57258d5](https://github.com/bouola/ansible-role-monitoring_agents/commit/57258d596c09eed5cc13b2dd66ae1281a5ae3c27))
+
 ## [1.1.1](https://github.com/bouola/ansible-role-monitoring_agents/compare/v1.1.0...v1.1.1) (2026-08-05)
 
 
