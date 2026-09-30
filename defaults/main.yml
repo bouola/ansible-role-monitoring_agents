@@ -22,6 +22,8 @@ monitoring_agents_user_shell: "/usr/sbin/nologin"
 
 # Existing paths granted ACLs to the shared monitoring group.
 # Each entry requires path, permissions, recursive, and default_acl values.
+# An optional systemd_unit (.service or .socket) reapplies the ACL each time
+# that unit starts, for runtime sockets recreated without their ACL.
 monitoring_agents_acl_paths: []
 
 # Whether node-exporter is installed and managed.

@@ -103,3 +103,32 @@
   when:
     - monitoring_agents_acl_paths | length > 0
     - monitoring_agents_acl_path_state.monitoring_agents_acl_path.default_acl
+
+- name: "Create systemd drop-in directories for runtime-managed ACL paths"
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ monitoring_agents_acl_unit }}.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ monitoring_agents_acl_paths | selectattr('systemd_unit', 'defined') | map(attribute='systemd_unit') | unique }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_unit
+    label: "{{ monitoring_agents_acl_unit }}"
+
+- name: "Reapply runtime-managed ACLs whenever their systemd unit starts"
+  ansible.builtin.template:
+    src: "acl-dropin.conf.j2"
+    dest: "/etc/systemd/system/{{ monitoring_agents_acl_unit }}.d/monitoring-agents-acl.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  vars:
+    monitoring_agents_acl_unit_paths: >-
+      {{ monitoring_agents_acl_paths | selectattr('systemd_unit', 'defined')
+         | selectattr('systemd_unit', 'equalto', monitoring_agents_acl_unit) | list }}
+  loop: "{{ monitoring_agents_acl_paths | selectattr('systemd_unit', 'defined') | map(attribute='systemd_unit') | unique }}"
+  loop_control:
+    loop_var: monitoring_agents_acl_unit
+    label: "{{ monitoring_agents_acl_unit }}"
+  notify: "Reload systemd units"

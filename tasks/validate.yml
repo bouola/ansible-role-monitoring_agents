@@ -78,9 +78,16 @@
       - monitoring_agents_acl_path.recursive is boolean
       - monitoring_agents_acl_path.default_acl is defined
       - monitoring_agents_acl_path.default_acl is boolean
+      - monitoring_agents_acl_path.systemd_unit is not defined
+        or (monitoring_agents_acl_path.systemd_unit is string
+            and monitoring_agents_acl_path.systemd_unit is match('^[A-Za-z0-9@._-]+\\.(service|socket)$')
+            and not monitoring_agents_acl_path.recursive
+            and not monitoring_agents_acl_path.default_acl)
     fail_msg: >-
       Each monitoring_agents_acl_paths entry must define a non-empty path, a permissions
       value containing only r, w, x, or X, plus boolean recursive and default_acl values.
+      An optional systemd_unit must name a .service or .socket unit and is only valid
+      for a single runtime path (recursive and default_acl set to false).
   loop: "{{ monitoring_agents_acl_paths }}"
   loop_control:
     loop_var: monitoring_agents_acl_path

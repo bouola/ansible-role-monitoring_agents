@@ -2,7 +2,9 @@
 Description=cAdvisor
 Documentation=https://github.com/google/cadvisor
 Wants=network-online.target
-After=network-online.target
+# cAdvisor registers its container factories once, at startup: start it after
+# the container runtimes so it can reach their sockets.
+After=network-online.target docker.service containerd.service
 
 [Service]
 Type=simple

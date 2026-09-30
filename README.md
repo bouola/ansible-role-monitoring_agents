@@ -24,7 +24,7 @@ Galaxy FQCN: `bouola.monitoring_agents`
 | `monitoring_agents_user` | string | `monitoring-agent` | System user used to run all monitoring agents. |
 | `monitoring_agents_group` | string | `monitoring-agent` | System group used to run all monitoring agents. |
 | `monitoring_agents_user_shell` | string | `/usr/sbin/nologin` | Login shell assigned to the monitoring agent system user. |
-| `monitoring_agents_acl_paths` | list | `[]` | Existing paths granted ACLs for `monitoring_agents_group`. Each entry requires `path`, `permissions`, `recursive`, and `default_acl`. |
+| `monitoring_agents_acl_paths` | list | `[]` | Existing paths granted ACLs for `monitoring_agents_group`. Each entry requires `path`, `permissions`, `recursive`, and `default_acl`, and accepts an optional `systemd_unit` for runtime sockets. |
 | `monitoring_agents_node_exporter_enabled` | boolean | `true` | Whether node-exporter is installed and managed. |
 | `monitoring_agents_node_exporter_version` | string | `1.12.1` | Version of node-exporter to install. |
 | `monitoring_agents_node_exporter_port` | integer | `9100` | TCP port where node-exporter listens. |
@@ -63,9 +63,28 @@ it grants execute only to directories and executable files. Include parent
 directories as separate entries when they are not already traversable by the
 monitoring group.
 
-Runtime socket ACLs are ephemeral: Docker, containerd, or the host can recreate
-a socket without its ACL. Rerun this role or manage persistence with a
-runtime-specific systemd drop-in.
+Runtime socket ACLs are ephemeral: Docker, containerd, or the host recreate
+their socket under `/run` at each start, without its ACL. After a reboot,
+cAdvisor then loses access to the runtime and reports containers without their
+names. Set `systemd_unit` on such an entry to the unit that creates the socket:
+the role installs a drop-in `/etc/systemd/system/<unit>.d/monitoring-agents-acl.conf`
+that reapplies the ACL after each start of that unit (`ExecStartPost=-setfacl`,
+whose failure never fails the runtime). `systemd_unit` accepts `.service` and
+`.socket` units and requires `recursive: false` and `default_acl: false`. The
+role only reloads systemd; the drop-in takes effect at the next start of the
+runtime, and the ACL is applied immediately by the role itself.
+
+cAdvisor starts after `docker.service` and `containerd.service`, so that its
+container factories can register at boot.
+
+Never set `recursive` or `default_acl` on `/var/lib/docker/containers`. Docker
+creates each container's `resolv.conf`, `hosts`, and `hostname` there and
+bind-mounts them into the container. A default ACL completes the missing
+entries from the directory mode (`other::---`), so non-root processes inside
+new containers can no longer read them and name resolution fails. For the same
+reason, do not grant recursive access to container root filesystems for
+cAdvisor filesystem statistics: disable the `disk` metric instead with
+`--disable_metrics` in `monitoring_agents_cadvisor_extra_args`.
 
 ```yaml
 monitoring_agents_acl_paths:
@@ -77,10 +96,12 @@ monitoring_agents_acl_paths:
     permissions: "rw"
     recursive: false
     default_acl: false
+    systemd_unit: "docker.socket"
   - path: "/run/containerd/containerd.sock"
     permissions: "rw"
     recursive: false
     default_acl: false
+    systemd_unit: "containerd.service"
 ```
 
 ## Dependencies
