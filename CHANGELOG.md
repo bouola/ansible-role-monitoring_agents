@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/bouola/ansible-role-monitoring_agents/compare/v1.2.0...v1.2.1) (2026-09-30)
+
+
+### Bug Fixes
+
+* add systemd unit support for managing ACLs on runtime sockets ([#5](https://github.com/bouola/ansible-role-monitoring_agents/issues/5)) ([97c99e2](https://github.com/bouola/ansible-role-monitoring_agents/commit/97c99e24ff3e52a073143caeeac24434364f68aa))
+
 # [1.2.0](https://github.com/bouola/ansible-role-monitoring_agents/compare/v1.1.1...v1.2.0) (2026-09-30)
 
 
