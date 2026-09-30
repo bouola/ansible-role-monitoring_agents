@@ -1,0 +1,8 @@
+# Managed by Ansible — do not edit manually.
+# {{ monitoring_agents_acl_unit }} recreates these paths when it starts, which
+# drops their ACLs. Reapply them after each start; a leading "-" keeps a
+# failed setfacl from failing the unit itself.
+[{{ 'Socket' if monitoring_agents_acl_unit is match('.*\\.socket$') else 'Service' }}]
+{% for monitoring_agents_acl_path in monitoring_agents_acl_unit_paths %}
+ExecStartPost=-/usr/bin/setfacl -m g:{{ monitoring_agents_group }}:{{ monitoring_agents_acl_path.permissions }} {{ monitoring_agents_acl_path.path }}
+{% endfor %}
