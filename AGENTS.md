@@ -82,6 +82,27 @@ Use Ansible `verify.yml` playbooks for scenario verification.
 If a full runtime test cannot be executed because of sandbox or Docker access limitations,
 say so clearly in the final report.
 
+### Pending Molecule fixes (apply during the Promtail to Grafana Alloy migration)
+
+Both fixes are already in `ansible-role-systemd-backup-jobs/molecule/*/molecule.yml`; reuse them here.
+
+- **Slow tasks (about 40 s each):** platform names such as `bouola_monitoring-agents-...` contain `_`, which is
+  invalid in a hostname. Docker drops it, the resulting hostname is missing from `/etc/hosts`, and every `sudo` run by
+  `become` waits for a DNS timeout. Set an explicit `hostname:` on each platform, for example
+  `hostname: "monitoring-agents-<scenario>"`.
+- **Docker inside the test container:** if a scenario needs a Docker daemon (for example to test Alloy's Docker log
+  discovery), the geerlingguy images do not include Docker: install `docker.io` in `prepare.yml`. The nested daemon
+  cannot mount overlay layers on the container's overlay root (`failed to mount ... overlay ... invalid argument`),
+  so put its storage on tmpfs:
+
+  ```yaml
+  tmpfs:
+    - "/var/lib/docker:rw,exec,size=2g"
+    - "/var/lib/containerd:rw,exec,size=2g"
+  ```
+
+  After changing `molecule.yml`, run `molecule destroy` first: an existing container keeps its old settings.
+
 ## Documentation expectations
 
 - Code can move before docs while the API is being refactored.

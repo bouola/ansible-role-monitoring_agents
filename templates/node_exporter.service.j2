@@ -8,7 +8,7 @@ After=network-online.target
 Type=simple
 User={{ monitoring_agents_user }}
 Group={{ monitoring_agents_group }}
-ExecStart={{ monitoring_agents_binary_install_dir }}/node_exporter --web.listen-address=:{{ monitoring_agents_node_exporter_port }}{{ (' ' ~ monitoring_agents_node_exporter_extra_args | join(' ')) if monitoring_agents_node_exporter_extra_args | length > 0 else '' }}
+ExecStart={{ monitoring_agents_binary_install_dir }}/node_exporter --web.listen-address={{ monitoring_agents_node_exporter_listen_address }}:{{ monitoring_agents_node_exporter_port }}{{ (' ' ~ monitoring_agents_node_exporter_extra_args | join(' ')) if monitoring_agents_node_exporter_extra_args | length > 0 else '' }}
 Restart=on-failure
 RestartSec=5s
 NoNewPrivileges=true

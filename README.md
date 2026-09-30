@@ -28,6 +28,7 @@ Galaxy FQCN: `bouola.monitoring_agents`
 | `monitoring_agents_node_exporter_enabled` | boolean | `true` | Whether node-exporter is installed and managed. |
 | `monitoring_agents_node_exporter_version` | string | `1.12.1` | Version of node-exporter to install. |
 | `monitoring_agents_node_exporter_port` | integer | `9100` | TCP port where node-exporter listens. |
+| `monitoring_agents_node_exporter_listen_address` | string | `""` | IPv4 address node-exporter binds to. An empty string listens on all interfaces; set a private address on hosts with a public interface. |
 | `monitoring_agents_node_exporter_extra_args` | list | `[]` | Additional CLI flags passed to node-exporter. |
 | `monitoring_agents_promtail_enabled` | boolean | `false` | Whether promtail is installed and managed. |
 | `monitoring_agents_promtail_docker_enabled` | boolean | `false` | Whether promtail's runtime user is added to the `docker` group. This grants Docker-equivalent root access. |
